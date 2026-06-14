@@ -164,7 +164,7 @@ tr:last-child td{border-bottom:none}
       <div class="sh">Мои сделки</div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th style="width:50px">Дата</th><th style="width:90px">Клиент</th><th style="width:80px">Техника</th><th style="width:60px">Сумма</th><th style="width:50px">Тип</th><th style="width:60px">Статус</th><th style="width:50px"></th></tr></thead>
+          <thead><tr><th style="width:50px">Дата</th><th style="width:55px">Отгрузка</th><th style="width:90px">Клиент</th><th style="width:80px">Техника</th><th style="width:60px">Сумма</th><th style="width:50px">Тип</th><th style="width:60px">Статус</th><th style="width:100px">Бонус</th><th style="width:30px"></th></tr></thead>
           <tbody id="my-sales-body"></tbody>
         </table>
       </div>
@@ -178,10 +178,15 @@ tr:last-child td{border-bottom:none}
         <div class="fl"><label>Дата</label><input type="date" id="s-date"></div>
         <div class="fl"><label>Клиент</label><input type="text" id="s-client" placeholder="ООО / ИП / ФИО"></div>
         <div class="fl span2"><label>Техника</label><input type="text" id="s-tech" placeholder="Марка, модель"></div>
-        <div class="fl"><label>Сумма сделки, ₽</label><input type="number" min="0" step="1000" id="s-sum" placeholder="0"></div>
-        <div class="fl"><label>Маржа, ₽</label><input type="number" min="0" step="1000" id="s-margin" placeholder="0"></div>
+        <div class="fl"><label>Дата отгрузки</label><input type="date" id="s-ship-date"></div>
+        <div class="fl"><label>Сумма сделки, ₽</label><input type="number" min="0" step="1000" id="s-sum" placeholder="0" oninput="calcMarginAuto()"></div>
+        <div class="fl"><label>Сумма покупки, ₽</label><input type="number" min="0" step="1000" id="s-purchase" placeholder="0" oninput="calcMarginAuto()"></div>
+        <div class="fl"><label>Расходы, ₽</label><input type="number" min="0" step="1000" id="s-expense" placeholder="0" oninput="calcMarginAuto()"></div>
+        <div class="fl"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="s-margin" placeholder="0" style="background:#f8f8f8" readonly></div>
         <div class="fl"><label>Тип оплаты</label><select id="s-type"><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select></div>
         <div class="fl"><label>Статус</label><select id="s-status"><option>Аванс получен</option><option>В работе</option><option>Закрыта</option><option>Отменена</option></select></div>
+        <div class="fl"><label>Бонус, ₽ (только при закрытии)</label><input type="number" min="0" step="100" id="s-bonus" placeholder="0"></div>
+        <div class="fl"><label>Комментарий к бонусу</label><input type="text" id="s-bonus-comm" placeholder="Описание бонуса..."></div>
         <div class="fl span2"><label>Комментарий</label><textarea id="s-comm" placeholder="Детали сделки..."></textarea></div>
       </div>
       <button class="btn btn-p" onclick="saveSale()">Добавить сделку</button>
@@ -244,7 +249,7 @@ tr:last-child td{border-bottom:none}
       </div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th style="width:50px">Дата</th><th style="width:65px">Менеджер</th><th style="width:80px">Клиент</th><th style="width:70px">Техника</th><th style="width:55px">Сумма</th><th style="width:45px">Тип</th><th style="width:60px">Статус</th><th style="width:30px"></th></tr></thead>
+          <thead><tr><th style="width:50px">Дата</th><th style="width:55px">Отгрузка</th><th style="width:65px">Менеджер</th><th style="width:80px">Клиент</th><th style="width:70px">Техника</th><th style="width:55px">Сумма</th><th style="width:45px">Тип</th><th style="width:60px">Статус</th><th style="width:70px">Бонус</th><th style="width:30px"></th></tr></thead>
           <tbody id="all-sales-body"></tbody>
         </table>
       </div>
@@ -297,10 +302,15 @@ tr:last-child td{border-bottom:none}
       <div class="fl"><label>Дата</label><input type="date" id="e-date"></div>
       <div class="fl"><label>Клиент</label><input type="text" id="e-client" placeholder="ООО / ИП / ФИО"></div>
       <div class="fl span2"><label>Техника</label><input type="text" id="e-tech" placeholder="Марка, модель"></div>
-      <div class="fl"><label>Сумма сделки, ₽</label><input type="number" min="0" step="1000" id="e-sum" placeholder="0"></div>
-      <div class="fl"><label>Маржа, ₽</label><input type="number" min="0" step="1000" id="e-margin" placeholder="0"></div>
+      <div class="fl"><label>Дата отгрузки</label><input type="date" id="e-ship-date"></div>
+      <div class="fl" style="display:flex;align-items:flex-end"><div style="width:100%"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="e-margin" placeholder="0" style="background:#f8f8f8" readonly></div></div>
+      <div class="fl"><label>Сумма сделки, ₽</label><input type="number" min="0" step="1000" id="e-sum" placeholder="0" oninput="calcMarginAutoEdit()"></div>
+      <div class="fl"><label>Сумма покупки, ₽</label><input type="number" min="0" step="1000" id="e-purchase" placeholder="0" oninput="calcMarginAutoEdit()"></div>
+      <div class="fl"><label>Расходы, ₽</label><input type="number" min="0" step="1000" id="e-expense" placeholder="0" oninput="calcMarginAutoEdit()"></div>
       <div class="fl"><label>Тип оплаты</label><select id="e-type"><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select></div>
       <div class="fl"><label>Статус</label><select id="e-status"><option>Аванс получен</option><option>В работе</option><option>Закрыта</option><option>Отменена</option></select></div>
+      <div class="fl"><label>Бонус, ₽</label><input type="number" min="0" step="100" id="e-bonus" placeholder="0"></div>
+      <div class="fl"><label>Комментарий к бонусу</label><input type="text" id="e-bonus-comm" placeholder="Описание бонуса..."></div>
       <div class="fl span2"><label>Комментарий</label><textarea id="e-comm" placeholder="Детали сделки..."></textarea></div>
     </div>
     <div style="display:flex;gap:8px">
@@ -681,22 +691,29 @@ function renderMySales(id) {
   tb.innerHTML = sales.map(s => {
     const idx = allSales.indexOf(s);
     const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
-    const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : '';
-    return `<tr><td>${fmtDate(s.date)}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td></tr>`;
+    const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : s.type === 'АВ' ? 'ba' : '';
+    const bonusCell = s.status === 'Закрыта' && s.bonus > 0 ? `<span class="badge bg">+₽${fmt(s.bonus)}${s.bonusComm?' · '+s.bonusComm:''}</span>` : '';
+    return `<tr><td>${fmtDate(s.date)}</td><td>${s.shipDate?fmtDate(s.shipDate):'—'}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td>${bonusCell}</td><td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td></tr>`;
   }).join('');
 }
 
 async function saveSale() {
   const id = currentUser;
+  const sStatus = document.getElementById('s-status').value;
   const rec = {
     mgr: id,
     date: document.getElementById('s-date').value,
+    shipDate: document.getElementById('s-ship-date').value || '',
     client: document.getElementById('s-client').value,
     tech: document.getElementById('s-tech').value,
     sum: Number(document.getElementById('s-sum').value || 0),
+    purchase: Number(document.getElementById('s-purchase').value || 0),
+    expense: Number(document.getElementById('s-expense').value || 0),
     margin: Number(document.getElementById('s-margin').value || 0),
     type: document.getElementById('s-type').value,
-    status: document.getElementById('s-status').value,
+    status: sStatus,
+    bonus: sStatus === 'Закрыта' ? Number(document.getElementById('s-bonus').value || 0) : 0,
+    bonusComm: sStatus === 'Закрыта' ? (document.getElementById('s-bonus-comm').value || '') : '',
     comm: document.getElementById('s-comm').value || '',
     ts: Date.now()
   };
@@ -705,7 +722,7 @@ async function saveSale() {
   const ok = document.getElementById('sale-ok');
   ok.style.display = 'block';
   setTimeout(() => ok.style.display = 'none', 3000);
-  ['s-client','s-tech','s-sum','s-margin','s-comm'].forEach(f => {
+  ['s-client','s-tech','s-sum','s-margin','s-purchase','s-expense','s-bonus','s-bonus-comm','s-comm','s-ship-date'].forEach(f => {
     const el = document.getElementById(f); if (el) el.value = '';
   });
   renderMySales(id);
@@ -831,14 +848,14 @@ function renderBossMetrics() {
   const pct = totalPlan > 0 ? Math.round(totalRev / totalPlan * 100) : 0;
   const contacts = filterByMonth(db.activity, 'date', m).reduce((s,a) => s + Number(a.newc||0) + Number(a.rep||0), 0);
   const leasing  = filterByMonth(db.activity, 'date', m).reduce((s,a) => s + Number(a.lc||0), 0);
+  const totalBonus = filterByMonth(db.sales.filter(s => s.status === 'Закрыта'), 'date', m).reduce((s,x) => s + Number(x.bonus||0), 0);
   document.getElementById('boss-metrics').innerHTML = `
     <div class="m"><div class="m-v">₽${fmt(totalRev)}</div><div class="m-l">Оборот</div></div>
     <div class="m"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж</div></div>
     <div class="m"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа</div><div class="m-s">${marginPct !== null ? 'план '+marginPct+'%' : ''}</div></div>
     <div class="m"><div class="m-v">₽${fmt(totalMargAV)}</div><div class="m-l">АВ</div></div>
-    <div class="m"><div class="m-v">${contacts}</div><div class="m-l">Контактов</div></div>
-    <div class="m"><div class="m-v">${leasing}</div><div class="m-l">Лизинг</div></div>
-    <div class="m"><div class="m-v">${marginPct !== null ? marginPct+'%' : '—'}</div><div class="m-l">План маржи</div></div>
+    <div class="m"><div class="m-v">₽${fmt(totalBonus)}</div><div class="m-l">Бонусы</div></div>
+    <div class="m"><div class="m-v">${marginPct !== null ? marginPct+'%' : '—'}</div><div class="m-l">% плана маржи</div></div>
   `;
 }
 
@@ -1026,14 +1043,17 @@ function renderAllSales() {
     const mgr = mgrById(s.mgr);
     const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
     const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : s.type === 'АВ' ? 'ba' : '';
+    const bCell = s.status === 'Закрыта' && s.bonus > 0 ? `<span class="badge bg">+₽${fmt(s.bonus)}</span>` : '';
     return `<tr>
       <td>${fmtDate(s.date)}</td>
+      <td>${s.shipDate?fmtDate(s.shipDate):'—'}</td>
       <td><span style="font-weight:500">${mgr?mgr.name:s.mgr}</span></td>
       <td>${s.client||''}</td>
       <td>${s.tech||''}</td>
       <td>₽${fmt(s.sum||0)}</td>
       <td><span class="badge ${tc}">${s.type||''}</span></td>
       <td><span class="badge ${sc}">${s.status||''}</span></td>
+      <td>${bCell}</td>
       <td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td>
     </tr>`;
   }).join('');
@@ -1065,6 +1085,22 @@ function renderActivity() {
   }).join('');
 }
 
+function calcMarginAuto() {
+  const sum = Number(document.getElementById('s-sum').value || 0);
+  const purchase = Number(document.getElementById('s-purchase').value || 0);
+  const expense = Number(document.getElementById('s-expense').value || 0);
+  const margin = sum - purchase - expense;
+  document.getElementById('s-margin').value = margin > 0 ? margin : 0;
+}
+
+function calcMarginAutoEdit() {
+  const sum = Number(document.getElementById('e-sum').value || 0);
+  const purchase = Number(document.getElementById('e-purchase').value || 0);
+  const expense = Number(document.getElementById('e-expense').value || 0);
+  const margin = sum - purchase - expense;
+  document.getElementById('e-margin').value = margin > 0 ? margin : 0;
+}
+
 let editIdx = -1;
 
 function openEditModal(idx) {
@@ -1078,7 +1114,13 @@ function openEditModal(idx) {
   document.getElementById('e-margin').value = s.margin || 0;
   document.getElementById('e-type').value = s.type || 'Наличные';
   document.getElementById('e-status').value = s.status || 'В работе';
+  document.getElementById('e-ship-date').value = s.shipDate || '';
+  document.getElementById('e-purchase').value = s.purchase || 0;
+  document.getElementById('e-expense').value = s.expense || 0;
+  document.getElementById('e-bonus').value = s.bonus || 0;
+  document.getElementById('e-bonus-comm').value = s.bonusComm || '';
   document.getElementById('e-comm').value = s.comm || '';
+  calcMarginAutoEdit();
   document.getElementById('edit-modal').classList.add('on');
 }
 
@@ -1092,12 +1134,17 @@ async function saveEditSale() {
   db.sales[editIdx] = {
     ...db.sales[editIdx],
     date: document.getElementById('e-date').value,
+    shipDate: document.getElementById('e-ship-date').value || '',
     client: document.getElementById('e-client').value,
     tech: document.getElementById('e-tech').value,
     sum: Number(document.getElementById('e-sum').value || 0),
     margin: Number(document.getElementById('e-margin').value || 0),
     type: document.getElementById('e-type').value,
     status: document.getElementById('e-status').value,
+    purchase: Number(document.getElementById('e-purchase').value || 0),
+    expense: Number(document.getElementById('e-expense').value || 0),
+    bonus: document.getElementById('e-status').value === 'Закрыта' ? Number(document.getElementById('e-bonus').value || 0) : 0,
+    bonusComm: document.getElementById('e-status').value === 'Закрыта' ? (document.getElementById('e-bonus-comm').value || '') : '',
     comm: document.getElementById('e-comm').value || ''
   };
   await saveDB();
