@@ -471,13 +471,16 @@ function buildLogin() {
     </div>
     ${totalMarginPlanLogin > 0 ? `
     <div style="font-size:10px;color:#666;margin-bottom:3px">Маржа от продаж</div>
-    <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-bottom:4px">
-      <div style="height:100%;width:${Math.min(100,totalPctLogin)}%;background:${totalPctLogin>=100?'#1a7a4a':totalPctLogin>=70?'#f0a500':'#c0392b'};border-radius:4px;transition:width .5s"></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <div style="flex:1;height:8px;background:#eee;border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${Math.min(100,totalPctLogin)}%;background:${totalPctLogin>=100?'#1a7a4a':totalPctLogin>=70?'#f0a500':'#c0392b'};border-radius:4px;transition:width .5s"></div>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:${totalPctLogin>=100?'#1a7a4a':totalPctLogin>=70?'#f0a500':'#c0392b'};flex-shrink:0;min-width:36px;text-align:right">${totalPctLogin}%</span>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:11px;color:#666;margin-bottom:8px">
       <span>Факт: ₽${fmt(totalMarginFactLogin)}</span>
       <span>План: ₽${fmt(totalMarginPlanLogin)}</span>
-      <span style="color:${totalMarginFactLogin-totalMarginPlanLogin>=0?'#1a7a4a':'#c0392b'};font-weight:500">${totalPctLogin}%</span>
+      <span style="color:${totalMarginFactLogin-totalMarginPlanLogin>=0?'#1a7a4a':'#c0392b'};font-weight:500">${totalMarginFactLogin>=totalMarginPlanLogin?'+':''}₽${fmt(totalMarginFactLogin-totalMarginPlanLogin)}</span>
     </div>` : ''}
     ${(() => { const totalPlanAVLogin = MANAGERS.reduce((s,m) => { const p = getMonthPlan(m.id, today().slice(0,7)); return s + Number(p.av||0); }, 0); if (!totalMarginAVLogin && !totalPlanAVLogin) return ''; const pctAVLogin = totalPlanAVLogin > 0 ? Math.min(100,Math.round(totalMarginAVLogin/totalPlanAVLogin*100)) : null; const colAV = pctAVLogin === null ? '#1a7a4a' : pctAVLogin >= 100 ? '#1a7a4a' : pctAVLogin >= 70 ? '#f0a500' : '#c0392b'; const diffAV = totalMarginAVLogin - totalPlanAVLogin; return `<div style="font-size:10px;color:#666;margin-bottom:3px">АВ</div>
     <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-bottom:4px">
@@ -928,13 +931,17 @@ function buildTeamGrid() {
         <div class="mgr-sub">${k.cnt} прод. · ₽${fmt(k.rev)} · марж. ₽${fmt(k.margin)}${k.marginAV > 0 ? ' · АВ ₽'+fmt(k.marginAV) : ''}</div>
         ${pm > 0 ? `<div style="display:flex;align-items:center;gap:5px;margin-top:4px">
           <div style="font-size:9px;color:#888;width:50px;flex-shrink:0">Маржа</div>
-          <div style="flex:1;height:4px;background:#eee;border-radius:2px;overflow:hidden"><div style="height:100%;width:${Math.min(100,pctM)}%;background:${colM};border-radius:2px"></div></div>
-          <span style="font-size:9px;font-weight:500;color:${colM};width:34px;text-align:right">${pctM}%</span>
+          <div style="flex:1;height:4px;background:#eee;border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(100,pctM)}%;background:${colM};border-radius:2px"></div>
+          </div>
+          <span style="font-size:9px;font-weight:600;color:${colM};width:38px;text-align:right">${pctM}%${pctM>100?' 🔥':''}</span>
         </div>` : ''}
         ${pa > 0 || k.marginAV > 0 ? `<div style="display:flex;align-items:center;gap:5px;margin-top:3px">
           <div style="font-size:9px;color:#888;width:50px;flex-shrink:0">АВ</div>
-          <div style="flex:1;height:4px;background:#eee;border-radius:2px;overflow:hidden"><div style="height:100%;width:${pctA!==null?Math.min(100,pctA):100}%;background:${colA};border-radius:2px"></div></div>
-          <span style="font-size:9px;font-weight:500;color:${colA};width:34px;text-align:right">${pctA!==null?pctA+'%':'₽'+fmt(k.marginAV||0)}</span>
+          <div style="flex:1;height:4px;background:#eee;border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${pctA!==null?Math.min(100,pctA):100}%;background:${colA};border-radius:2px"></div>
+          </div>
+          <span style="font-size:9px;font-weight:600;color:${colA};width:38px;text-align:right">${pctA!==null?pctA+'%'+(pctA>100?' 🔥':''):'₽'+fmt(k.marginAV||0)}</span>
         </div>` : ''}
       </div>
     </div>`;
