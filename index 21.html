@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Дашборд продаж техники</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;background:#f5f5f5;color:#1a1a1a}
+.app{padding:14px;max-width:680px;margin:0 auto}
+.screen{display:none}.screen.on{display:block}
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e5e5e5;background:#fff;padding:12px 14px;border-radius:12px;margin-bottom:12px}
+.topbar-title{font-size:15px;font-weight:500;flex:1}
+.nav{display:flex;gap:3px;margin-bottom:14px;background:#fff;padding:6px;border-radius:12px}
+.nav-btn{flex:1;padding:7px 4px;font-size:11px;text-align:center;cursor:pointer;border-radius:8px;border:none;background:transparent;color:#666;transition:all .15s;font-family:inherit}
+.nav-btn.on{background:#f0f0f0;color:#1a1a1a;font-weight:500}
+.card{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:12px;border:1px solid #eee}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.m{background:#f8f8f8;border-radius:8px;padding:10px 12px;text-align:center}
+.m-v{font-size:20px;font-weight:500}
+.m-l{font-size:11px;color:#666;margin-top:2px}
+.m-s{font-size:10px;color:#999}
+.sh{font-size:13px;font-weight:500;margin-bottom:10px}
+.sl{font-size:10px;font-weight:500;color:#888;letter-spacing:.04em;text-transform:uppercase;margin:12px 0 6px}
+.row{display:flex;align-items:center;gap:8px;padding:9px 10px;background:#f8f8f8;border-radius:8px;margin-bottom:6px}
+.ri{flex:1;min-width:0}
+.rn{font-size:12px;font-weight:500}
+.rs{font-size:11px;color:#666}
+.bar-wrap{width:80px;flex-shrink:0}
+.bar-bg{height:5px;background:#e5e5e5;border-radius:3px;overflow:hidden}
+.bar-f{height:100%;border-radius:3px}
+.bv{font-size:11px;font-weight:500;text-align:right;margin-top:2px}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:500}
+.bg{background:#e6f4ee;color:#1a7a4a}
+.ba{background:#fff8e6;color:#946c00}
+.br{background:#fdeaea;color:#c0392b}
+.bb{background:#e8f0fe;color:#1a56a0}
+.ins{display:flex;align-items:flex-start;gap:7px;padding:8px 10px;border-radius:8px;margin-bottom:5px;font-size:11px;line-height:1.5}
+.ins i{font-size:15px;flex-shrink:0;margin-top:1px}
+.ins.g{background:#e6f4ee}.ins.a{background:#fff8e6}.ins.r{background:#fdeaea}.ins.b{background:#e8f0fe}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.fl label{display:block;font-size:11px;color:#666;margin-bottom:3px}
+.fl input,.fl select,.fl textarea{width:100%;font-size:12px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;font-family:inherit;background:#fff;color:#1a1a1a}
+.fl input:focus,.fl select:focus,.fl textarea:focus{outline:none;border-color:#999}
+.fl textarea{height:54px;resize:vertical}
+.span2{grid-column:span 2}
+.btn{padding:8px 14px;font-size:12px;font-weight:500;border-radius:8px;cursor:pointer;border:1px solid #ddd;background:#fff;color:#1a1a1a;font-family:inherit;transition:all .15s}
+.btn:hover{background:#f5f5f5}
+.btn-p{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.btn-p:hover{background:#333}
+.ok{font-size:11px;color:#1a7a4a;margin-top:8px;display:none}
+.err{font-size:11px;color:#c0392b;margin-top:8px;display:none}
+table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+th{text-align:left;padding:5px 6px;color:#666;font-weight:500;border-bottom:1px solid #eee;white-space:nowrap;overflow:hidden}
+td{padding:6px 6px;border-bottom:1px solid #eee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+tr:last-child td{border-bottom:none}
+.kpb{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.kpl{font-size:11px;color:#666;width:120px;flex-shrink:0}
+.kpbg{flex:1;height:7px;background:#e5e5e5;border-radius:4px;overflow:hidden}
+.kpf{height:100%;border-radius:4px}
+.kpv{font-size:11px;font-weight:500;width:30px;text-align:right;flex-shrink:0}
+.avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.av-a{background:#E6F1FB;color:#0C447C}
+.av-b{background:#E1F5EE;color:#085041}
+.av-c{background:#FAEEDA;color:#633806}
+.av-d{background:#FBEAF0;color:#72243E}
+.av-e{background:#EEEDFE;color:#3C3489}
+.av-f{background:#FAECE7;color:#712B13}
+.av-boss{background:#f0f0f0;color:#333}
+.login-wrap{display:flex;flex-direction:column;gap:8px}
+.mgr-card{padding:14px 16px;background:#fff;border:1px solid #eee;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:border-color .15s}
+.mgr-card:hover{border-color:#999}
+.mgr-info{flex:1}
+.mgr-name{font-size:14px;font-weight:500}
+.mgr-sub{font-size:12px;color:#666}
+.role-badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:500}
+.role-mgr{background:#e8f0fe;color:#1a56a0}
+.role-boss{background:#eeedfe;color:#3c3489}
+.empty{text-align:center;padding:20px;color:#999;font-size:12px}
+.mgr-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.loading{text-align:center;padding:30px;color:#999;font-size:13px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#ccc;display:inline-block;margin-left:6px;vertical-align:middle}
+.sync-dot.ok{background:#1a7a4a}
+.sync-dot.err{background:#c0392b}
+.sync-dot.loading{background:#f0a500;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.month-bar{display:flex;align-items:center;gap:8px;background:#fff;padding:8px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #eee}
+.month-bar label{font-size:11px;color:#666;flex-shrink:0}
+.month-bar select{font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;font-family:inherit;flex:1}
+.month-badge{font-size:11px;padding:3px 8px;border-radius:6px;background:#e8f0fe;color:#1a56a0;font-weight:500;flex-shrink:0}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.on{display:flex}
+.modal{background:#fff;border-radius:16px;padding:20px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:500;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:#666;padding:0;line-height:1}
+.btn-edit{padding:3px 8px;font-size:10px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer;color:#666;font-family:inherit}
+.btn-edit:hover{background:#f5f5f5}
+.btn-del{padding:3px 8px;font-size:10px;border-radius:6px;border:1px solid #fdd;background:#fff;cursor:pointer;color:#c0392b;font-family:inherit}
+.btn-del:hover{background:#fdeaea}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+<div id="s-login" class="screen on">
+  <div style="text-align:center;padding:20px 0 16px">
+    <div style="font-size:18px;font-weight:500;margin-bottom:4px">Дашборд продаж техники</div>
+    <div style="font-size:12px;color:#666">Выберите свой профиль</div>
+  </div>
+  <div class="login-wrap" id="login-list">
+    <div class="loading">Загрузка данных<span class="sync-dot loading"></span></div>
+  </div>
+</div>
+
+<div id="s-mgr" class="screen">
+  <div class="topbar">
+    <div class="topbar-title" id="mgr-title">Мой день</div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="avatar" id="mgr-av"></div>
+      <span id="mgr-uname" style="font-size:12px;color:#666"></span>
+      <span class="sync-dot" id="mgr-sync"></span>
+    </div>
+    <button class="btn" onclick="logout()" style="padding:5px 10px;font-size:11px">Выйти</button>
+  </div>
+  <div class="nav">
+    <button class="nav-btn on" onclick="mgrTab('day',this)"><i class="ti ti-calendar"></i> День</button>
+    <button class="nav-btn" onclick="mgrTab('my',this)"><i class="ti ti-chart-bar"></i> Итоги</button>
+    <button class="nav-btn" onclick="mgrTab('sales',this)"><i class="ti ti-plus"></i> Сделка</button>
+    <button class="nav-btn" onclick="mgrTab('stat',this)"><i class="ti ti-user"></i> Статистика</button>
+  </div>
+
+  <div id="t-day" class="screen on">
+    <div class="card">
+      <div class="sh">Заполнить за сегодня</div>
+      <div style="font-size:11px;color:#666;margin-bottom:10px" id="daily-date-label"></div>
+      <div class="fgrid">
+        <div class="fl"><label>Найдено техники</label><input type="number" min="0" step="1" id="d-found" placeholder="0"></div>
+        <div class="fl"><label>Забронировано</label><input type="number" min="0" step="1" id="d-book" placeholder="0"></div>
+        <div class="fl"><label>Объявлений на Авито всего</label><input type="number" min="0" step="1" id="d-ads" placeholder="0"></div>
+        <div class="fl"><label>Выставлено объявлений сегодня</label><input type="number" min="0" step="1" id="d-upd" placeholder="0"></div>
+        <div class="fl"><label>Новых клиентов</label><input type="number" min="0" step="1" id="d-newc" placeholder="0"></div>
+        <div class="fl"><label>Повторных контактов</label><input type="number" min="0" step="1" id="d-rep" placeholder="0"></div>
+        <div class="fl"><label>Качественных диалогов</label><input type="number" min="0" step="1" id="d-dial" placeholder="0"></div>
+        <div class="fl"><label>Контакты лизинг. менедж.</label><input type="number" min="0" step="1" id="d-lc" placeholder="0"></div>
+        <div class="fl span2"><label>Комментарий</label><textarea id="d-comm" placeholder="Что сделал, планы, сложности..."></textarea></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-p" onclick="saveDay()">Сохранить</button>
+        <button class="btn" onclick="clearDay()">Очистить</button>
+      </div>
+      <div class="ok" id="day-ok"><i class="ti ti-check"></i> Данные сохранены</div>
+      <div class="err" id="day-err"><i class="ti ti-x"></i> Ошибка сохранения, попробуйте ещё раз</div>
+    </div>
+    <div class="card">
+      <div class="sh">Мои последние записи</div>
+      <div id="day-history"></div>
+    </div>
+  </div>
+
+  <div id="t-my" class="screen">
+    <div class="metrics" id="my-metrics"></div>
+    <div class="card">
+      <div class="sh">Мои сделки</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th style="width:50px">Дата</th><th style="width:90px">Клиент</th><th style="width:80px">Техника</th><th style="width:60px">Сумма</th><th style="width:50px">Тип</th><th style="width:60px">Статус</th><th style="width:50px"></th></tr></thead>
+          <tbody id="my-sales-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="t-sales" class="screen">
+    <div class="card">
+      <div class="sh">Добавить продажу</div>
+      <div class="fgrid">
+        <div class="fl"><label>Дата</label><input type="date" id="s-date"></div>
+        <div class="fl"><label>Клиент</label><input type="text" id="s-client" placeholder="ООО / ИП / ФИО"></div>
+        <div class="fl span2"><label>Техника</label><input type="text" id="s-tech" placeholder="Марка, модель"></div>
+        <div class="fl"><label>Сумма сделки, ₽</label><input type="number" min="0" step="1000" id="s-sum" placeholder="0"></div>
+        <div class="fl"><label>Маржа, ₽</label><input type="number" min="0" step="1000" id="s-margin" placeholder="0"></div>
+        <div class="fl"><label>Тип оплаты</label><select id="s-type"><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select></div>
+        <div class="fl"><label>Статус</label><select id="s-status"><option>Аванс получен</option><option>В работе</option><option>Закрыта</option><option>Отменена</option></select></div>
+        <div class="fl span2"><label>Комментарий</label><textarea id="s-comm" placeholder="Детали сделки..."></textarea></div>
+      </div>
+      <button class="btn btn-p" onclick="saveSale()">Добавить сделку</button>
+      <div class="ok" id="sale-ok"><i class="ti ti-check"></i> Сделка добавлена</div>
+      <div class="err" id="sale-err"><i class="ti ti-x"></i> Ошибка, попробуйте ещё раз</div>
+    </div>
+  </div>
+
+  <div id="t-stat" class="screen">
+    <div id="stat-content"></div>
+  </div>
+</div>
+
+<div id="s-boss" class="screen">
+  <div class="topbar">
+    <div class="topbar-title">Дашборд руководителя</div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="avatar av-boss" style="width:30px;height:30px;font-size:10px">РУ</div>
+      <span class="sync-dot" id="boss-sync"></span>
+    </div>
+    <button class="btn" onclick="logout()" style="padding:5px 10px;font-size:11px">Выйти</button>
+  </div>
+  <div class="nav">
+    <button class="nav-btn on" onclick="bossTab('main',this)"><i class="ti ti-home"></i> Главная</button>
+    <button class="nav-btn" onclick="bossTab('team',this)"><i class="ti ti-users"></i> Команда</button>
+    <button class="nav-btn" onclick="bossTab('all-sales',this)"><i class="ti ti-list"></i> Продажи</button>
+    <button class="nav-btn" onclick="bossTab('activity',this)"><i class="ti ti-activity"></i> Активность</button>
+    <button class="nav-btn" onclick="bossTab('plans',this)"><i class="ti ti-target"></i> Планы</button>
+  </div>
+  <div class="month-bar">
+    <label>📅 Период:</label>
+    <select id="month-filter" onchange="onMonthChange()"></select>
+    <span class="month-badge" id="month-badge"></span>
+  </div>
+
+  <div id="b-main" class="screen on">
+    <div class="metrics" id="boss-metrics"></div>
+    <div class="card">
+      <div class="sh">Рейтинг менеджеров</div>
+      <div id="boss-ranking"></div>
+    </div>
+    <div class="card">
+      <div class="sh">Выводы системы</div>
+      <div id="boss-insights"></div>
+    </div>
+  </div>
+
+  <div id="b-team" class="screen">
+    <div class="mgr-grid" id="team-grid"></div>
+    <div class="card" id="team-detail" style="display:none"></div>
+  </div>
+
+  <div id="b-all-sales" class="screen">
+    <div class="card">
+      <div class="sh">Все продажи</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <select id="filter-mgr" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Все менеджеры</option></select>
+        <select id="filter-type" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Любой тип</option><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select>
+        <select id="filter-status" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Любой статус</option><option>Закрыта</option><option>В работе</option><option>Аванс получен</option><option>Отменена</option></select>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th style="width:50px">Дата</th><th style="width:65px">Менеджер</th><th style="width:80px">Клиент</th><th style="width:70px">Техника</th><th style="width:55px">Сумма</th><th style="width:45px">Тип</th><th style="width:60px">Статус</th><th style="width:30px"></th></tr></thead>
+          <tbody id="all-sales-body"></tbody>
+        </table>
+      </div>
+      <div id="all-sales-total" style="font-size:12px;color:#666;margin-top:8px;text-align:right"></div>
+    </div>
+  </div>
+
+  <div id="b-plans" class="screen">
+    <div class="card">
+      <div class="sh">Планы по марже</div>
+      <div style="font-size:11px;color:#666;margin-bottom:12px">Установите план по марже для каждого менеджера на выбранный месяц</div>
+      <div id="plans-form"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-p" onclick="savePlans()">Сохранить планы</button>
+      </div>
+      <div class="ok" id="plans-ok" style="margin-top:8px"><i class="ti ti-check"></i> Планы сохранены</div>
+    </div>
+    <div class="card">
+      <div class="sh">Выполнение плана по марже</div>
+      <div id="plans-progress"></div>
+    </div>
+  </div>
+
+  <div id="b-activity" class="screen">
+    <div class="card">
+      <div class="sh">Ежедневная активность команды</div>
+      <div style="margin-bottom:10px">
+        <select id="act-filter-mgr" onchange="renderActivity()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Все менеджеры</option></select>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th style="width:55px">Дата</th><th style="width:65px">Менеджер</th><th style="width:35px">Брон.</th><th style="width:40px">Объявл.</th><th style="width:40px">Клиенты</th><th style="width:40px">Диал.</th><th style="width:40px">Лизинг</th><th style="width:120px">Комментарий</th></tr></thead>
+          <tbody id="activity-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- Edit Sale Modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <span>Редактировать сделку</span>
+      <button class="modal-close" onclick="closeEditModal()">×</button>
+    </div>
+    <div class="fgrid">
+      <div class="fl"><label>Дата</label><input type="date" id="e-date"></div>
+      <div class="fl"><label>Клиент</label><input type="text" id="e-client" placeholder="ООО / ИП / ФИО"></div>
+      <div class="fl span2"><label>Техника</label><input type="text" id="e-tech" placeholder="Марка, модель"></div>
+      <div class="fl"><label>Сумма сделки, ₽</label><input type="number" min="0" step="1000" id="e-sum" placeholder="0"></div>
+      <div class="fl"><label>Маржа, ₽</label><input type="number" min="0" step="1000" id="e-margin" placeholder="0"></div>
+      <div class="fl"><label>Тип оплаты</label><select id="e-type"><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select></div>
+      <div class="fl"><label>Статус</label><select id="e-status"><option>Аванс получен</option><option>В работе</option><option>Закрыта</option><option>Отменена</option></select></div>
+      <div class="fl span2"><label>Комментарий</label><textarea id="e-comm" placeholder="Детали сделки..."></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-p" onclick="saveEditSale()">Сохранить</button>
+      <button class="btn" onclick="closeEditModal()">Отмена</button>
+    </div>
+    <div class="ok" id="edit-ok" style="margin-top:8px"><i class="ti ti-check"></i> Сохранено</div>
+  </div>
+</div>
+
+<script>
+const BIN_ID = '6a272392da38895dfe9c0819';
+const API_KEY = '$2a$10$AMXq4WyXjZKQOdnamGoJo.yZPUj6UNPilkTRZpYo1qG/tOww3CX9a';
+const BIN_URL = 'https://api.jsonbin.io/v3/b/' + BIN_ID;
+
+const MANAGERS = [
+  {id:'ilya',  name:'Илья',    cls:'av-a', color:'#185FA5', plan:6000000},
+  {id:'filip', name:'Филипп',  cls:'av-b', color:'#0F6E56', plan:5000000},
+  {id:'artg',  name:'Артем Г', cls:'av-c', color:'#BA7517', plan:5000000},
+  {id:'arts',  name:'Артем Ш', cls:'av-d', color:'#993556', plan:5000000},
+  {id:'vlad',  name:'Влад',    cls:'av-e', color:'#534AB7', plan:4000000},
+  {id:'felix', name:'Феликс',  cls:'av-f', color:'#993C1D', plan:4000000},
+];
+
+let db = {sales:[], activity:[], plans:{}};
+let currentUser = null;
+let saving = false;
+
+async function loadDB() {
+  try {
+    const r = await fetch(BIN_URL + '/latest', {
+      headers: {'X-Master-Key': API_KEY}
+    });
+    const json = await r.json();
+    db = json.record || {sales:[], activity:[], plans:{}};
+    if (!db.sales) db.sales = [];
+    if (!db.activity) db.activity = [];
+    if (!db.plans) db.plans = {};
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+async function saveDB() {
+  if (saving) return;
+  saving = true;
+  setSyncDot('loading');
+  try {
+    await fetch(BIN_URL, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json','X-Master-Key': API_KEY},
+      body: JSON.stringify(db)
+    });
+    setSyncDot('ok');
+    setTimeout(() => setSyncDot('idle'), 3000);
+  } catch(e) {
+    setSyncDot('err');
+  }
+  saving = false;
+}
+
+function setSyncDot(state) {
+  ['mgr-sync','boss-sync'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'sync-dot' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : state === 'loading' ? ' loading' : '');
+  });
+}
+
+function fmt(n) {
+  n = Math.round(n);
+  return n >= 1000000 ? (n/1000000).toFixed(1) + 'М' : n >= 1000 ? Math.round(n/1000) + 'К' : String(n);
+}
+function today() { return new Date().toISOString().split('T')[0]; }
+function fmtDate(d) { if (!d) return ''; const p = d.split('-'); return p[2] + '.' + p[1]; }
+function mgrById(id) { return MANAGERS.find(m => m.id === id); }
+function currentMonth() {
+  const el = document.getElementById('month-filter');
+  return el ? el.value : today().slice(0,7);
+}
+function filterByMonth(arr, field, month) {
+  if (!month || month === 'all') return arr;
+  return arr.filter(x => (x[field]||'').startsWith(month));
+}
+
+function buildMonthFilter() {
+  const el = document.getElementById('month-filter');
+  if (!el) return;
+  const months = new Set();
+  const now = today().slice(0,7);
+  months.add(now);
+  db.sales.forEach(s => { if (s.date) months.add(s.date.slice(0,7)); });
+  db.activity.forEach(a => { if (a.date) months.add(a.date.slice(0,7)); });
+  const sorted = [...months].sort().reverse();
+  const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  el.innerHTML = sorted.map(m => {
+    const [y, mo] = m.split('-');
+    const label = MONTHS_RU[parseInt(mo)-1] + ' ' + y;
+    return `<option value="${m}">${label}</option>`;
+  }).join('');
+  el.value = now;
+  updateMonthBadge(now);
+}
+
+function updateMonthBadge(month) {
+  const badge = document.getElementById('month-badge');
+  if (!badge) return;
+  const MONTHS_RU = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  const [y, mo] = month.split('-');
+  const now = today().slice(0,7);
+  badge.textContent = month === now ? 'Текущий месяц' : MONTHS_RU[parseInt(mo)-1] + ' ' + y;
+}
+
+function onMonthChange() {
+  updateMonthBadge(currentMonth());
+  buildBoss();
+}
+
+function calcKpd(id, month) {
+  const m = month || currentMonth();
+  const allClosed = filterByMonth(db.sales.filter(s => s.mgr === id && s.status === 'Закрыта'), 'date', m);
+  const sales = allClosed.filter(s => s.type !== 'АВ');
+  const salesAV = allClosed.filter(s => s.type === 'АВ');
+  const act = filterByMonth(db.activity.filter(a => a.mgr === id), 'date', m);
+  const rev = sales.reduce((s,x) => s + Number(x.sum||0), 0);
+  const margin = sales.reduce((s,x) => s + Number(x.margin||0), 0);
+  const marginAV = salesAV.reduce((s,x) => s + Number(x.margin||0), 0);
+  const cntAV = salesAV.length;
+  const cnt = sales.length;
+  const contacts = act.reduce((s,x) => s + Number(x.newc||0) + Number(x.rep||0), 0);
+  const bookings = act.reduce((s,x) => s + Number(x.book||0), 0);
+  const leasing = act.reduce((s,x) => s + Number(x.lc||0), 0);
+  const ads = act.reduce((s,x) => s + Number(x.ads||0) + Number(x.upd||0), 0);
+  const mgr = mgrById(id);
+  const plan = mgr ? mgr.plan : 5000000;
+
+  const actScore = Math.min(100, Math.round(
+    (Math.min(bookings,20)/20)*40 +
+    (Math.min(ads,30)/30)*25 +
+    (Math.min(contacts,60)/60)*25 +
+    (Math.min(leasing,10)/10)*10
+  ));
+  const convBase = contacts > 0 ? Math.min(1, cnt / Math.max(contacts * 0.12, 1)) : 0;
+  const convScore = Math.min(100, Math.round(convBase * 100));
+  const finScore = Math.min(100, Math.round(
+    (Math.min(cnt,10)/10)*30 +
+    (Math.min(rev,plan)/plan)*40 +
+    (margin > 0 && rev > 0 ? Math.min(margin/rev, 0.15)/0.15 : 0)*30
+  ));
+  const kpd = Math.round(actScore * 0.3 + convScore * 0.3 + finScore * 0.4);
+  return {kpd, actScore, convScore, finScore, rev, margin, marginAV, cnt, cntAV, contacts, bookings, leasing, ads};
+}
+
+function buildLogin() {
+  const el = document.getElementById('login-list');
+  el.innerHTML = '';
+  const totalMarginPlanLogin = MANAGERS.reduce((s,m) => { const p = getMonthPlan(m.id, today().slice(0,7)); return s + Number(p.margin||0); }, 0);
+  const totalMarginFactLogin = MANAGERS.reduce((s,m) => { const k = calcKpd(m.id, today().slice(0,7)); return s + k.margin; }, 0);
+  const totalMarginAVLogin = MANAGERS.reduce((s,m) => { const k = calcKpd(m.id, today().slice(0,7)); return s + (k.marginAV||0); }, 0);
+  const totalPctLogin = totalMarginPlanLogin > 0 ? Math.round(totalMarginFactLogin / totalMarginPlanLogin * 100) : null;
+
+  // Team summary card
+  el.innerHTML += `<div class="card" style="margin-bottom:12px;background:linear-gradient(135deg,#f8f9ff,#fff)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:500">Команда — маржа за ${new Date().toLocaleDateString('ru-RU',{month:'long',year:'numeric'})}</div>
+      ${totalPctLogin !== null ? `<span class="badge" style="background:${totalPctLogin>=100?'#e6f4ee':totalPctLogin>=70?'#fff8e6':'#fdeaea'};color:${totalPctLogin>=100?'#1a7a4a':totalPctLogin>=70?'#946c00':'#c0392b'};font-size:12px;padding:3px 10px">маржа ${totalPctLogin}%</span>` : '<span style="font-size:11px;color:#999">планы не заданы</span>'}
+    </div>
+    ${totalMarginPlanLogin > 0 ? `
+    <div style="font-size:10px;color:#666;margin-bottom:3px">Маржа от продаж</div>
+    <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-bottom:4px">
+      <div style="height:100%;width:${Math.min(100,totalPctLogin)}%;background:${totalPctLogin>=100?'#1a7a4a':totalPctLogin>=70?'#f0a500':'#c0392b'};border-radius:4px;transition:width .5s"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#666;margin-bottom:8px">
+      <span>Факт: ₽${fmt(totalMarginFactLogin)}</span>
+      <span>План: ₽${fmt(totalMarginPlanLogin)}</span>
+      <span style="color:${totalMarginFactLogin-totalMarginPlanLogin>=0?'#1a7a4a':'#c0392b'};font-weight:500">${totalPctLogin}%</span>
+    </div>` : ''}
+    ${(() => { const totalPlanAVLogin = MANAGERS.reduce((s,m) => { const p = getMonthPlan(m.id, today().slice(0,7)); return s + Number(p.av||0); }, 0); if (!totalMarginAVLogin && !totalPlanAVLogin) return ''; const pctAVLogin = totalPlanAVLogin > 0 ? Math.min(100,Math.round(totalMarginAVLogin/totalPlanAVLogin*100)) : null; const colAV = pctAVLogin === null ? '#1a7a4a' : pctAVLogin >= 100 ? '#1a7a4a' : pctAVLogin >= 70 ? '#f0a500' : '#c0392b'; const diffAV = totalMarginAVLogin - totalPlanAVLogin; return `<div style="font-size:10px;color:#666;margin-bottom:3px">АВ</div>
+    <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-bottom:4px">
+      <div style="height:100%;width:${pctAVLogin !== null ? pctAVLogin : 100}%;background:${colAV};border-radius:4px;transition:width .5s"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#666;margin-bottom:8px">
+      <span>Факт: ₽${fmt(totalMarginAVLogin)}</span>
+      ${totalPlanAVLogin > 0 ? `<span>План: ₽${fmt(totalPlanAVLogin)}</span><span style="color:${diffAV>=0?'#1a7a4a':'#c0392b'}">${diffAV>=0?'+':''}₽${fmt(diffAV)}</span>` : ''}
+    </div>`; })()}
+  </div>`;
+
+  MANAGERS.forEach(m => {
+    const k = calcKpd(m.id, today().slice(0,7));
+    const plan = getMonthPlan(m.id, today().slice(0,7));
+    const planMargin = Number(plan.margin||0);
+    const pct = planMargin > 0 ? Math.min(100, Math.round(k.margin / planMargin * 100)) : null;
+    const barColor = pct === null ? '#ddd' : pct >= 100 ? '#1a7a4a' : pct >= 70 ? '#f0a500' : '#c0392b';
+    el.innerHTML += `<div class="mgr-card" onclick="login('${m.id}')">
+      <div class="avatar ${m.cls}" style="width:40px;height:40px;font-size:14px">${m.name[0]}</div>
+      <div class="mgr-info">
+        <div class="mgr-name">${m.name}</div>
+        <div class="mgr-sub">${k.cnt} продаж · маржа ₽${fmt(k.margin)}${k.marginAV > 0 ? ' · АВ ₽'+fmt(k.marginAV) : ''}</div>
+        ${planMargin > 0 ? `
+        <div style="margin-top:5px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+            <div style="font-size:9px;color:#888;width:70px;flex-shrink:0">Маржа продажи</div>
+            <div style="flex:1;height:5px;background:#eee;border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px"></div>
+            </div>
+            <span style="font-size:10px;font-weight:500;color:${barColor};flex-shrink:0;width:36px;text-align:right">${pct}%</span>
+          </div>
+          ${(() => { const planAV = Number(getMonthPlan(m.id, today().slice(0,7)).av||0); const mAV = k.marginAV||0; if (!mAV && !planAV) return ''; const pctAV = planAV > 0 ? Math.min(100, Math.round(mAV/planAV*100)) : null; const colAV = pctAV === null ? '#1a7a4a' : pctAV >= 100 ? '#1a7a4a' : pctAV >= 70 ? '#f0a500' : '#c0392b'; return `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+            <div style="font-size:9px;color:#888;width:70px;flex-shrink:0">АВ</div>
+            <div style="flex:1;height:5px;background:#eee;border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${planAV > 0 ? pctAV : 100}%;background:${colAV};border-radius:3px"></div>
+            </div>
+            <span style="font-size:10px;font-weight:500;color:${colAV};flex-shrink:0;width:52px;text-align:right">${planAV > 0 ? pctAV+'%' : '₽'+fmt(mAV)}</span>
+          </div>`; })()}
+        </div>` : `<div style="margin-top:5px">
+          <div style="font-size:10px;color:#bbb">план не задан</div>
+          ${k.marginAV > 0 ? `<div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+            <div style="font-size:9px;color:#888;width:70px;flex-shrink:0">АВ</div>
+            <div style="flex:1;height:5px;background:#eee;border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${(() => { const planAV = Number(getMonthPlan(m.id, today().slice(0,7)).av||0); return planAV > 0 ? Math.min(100,Math.round((k.marginAV||0)/planAV*100)) : 100; })()}%;background:${(() => { const planAV = Number(getMonthPlan(m.id, today().slice(0,7)).av||0); if (!planAV) return '#1a7a4a'; const p = Math.min(100,Math.round((k.marginAV||0)/planAV*100)); return p>=100?'#1a7a4a':p>=70?'#f0a500':'#c0392b'; })()};border-radius:3px"></div>
+            </div>
+            <span style="font-size:10px;font-weight:500;color:#1a7a4a;flex-shrink:0;width:52px;text-align:right">${(() => { const planAV = Number(getMonthPlan(m.id, today().slice(0,7)).av||0); return planAV > 0 ? Math.min(100,Math.round((k.marginAV||0)/planAV*100))+ '%' : '₽'+fmt(k.marginAV||0); })()}</span>
+          </div>` : ''}
+        </div>`}
+      </div>
+      <span class="role-badge role-mgr">Менеджер</span>
+    </div>`;
+  });
+  el.innerHTML += `<div class="mgr-card" onclick="login('boss')">
+    <div class="avatar av-boss" style="width:40px;height:40px;font-size:14px">РУ</div>
+    <div class="mgr-info">
+      <div class="mgr-name">Руководитель</div>
+      <div class="mgr-sub">Полный доступ к дашборду</div>
+    </div>
+    <span class="role-badge role-boss">Руководитель</span>
+  </div>`;
+}
+
+function login(id) {
+  currentUser = id;
+  show('s-login', false);
+  if (id === 'boss') { show('s-boss', true); buildBoss(); }
+  else { show('s-mgr', true); buildMgr(id); }
+}
+
+function logout() {
+  currentUser = null;
+  ['s-mgr','s-boss'].forEach(s => show(s, false));
+  show('s-login', true);
+  buildLogin();
+}
+
+function show(id, on) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.toggle('on', on); }
+}
+
+function buildMgr(id) {
+  const m = mgrById(id);
+  document.getElementById('mgr-title').textContent = m.name;
+  const av = document.getElementById('mgr-av');
+  av.className = 'avatar ' + m.cls;
+  av.textContent = m.name[0];
+  document.getElementById('mgr-uname').textContent = m.name;
+  document.getElementById('s-date').value = today();
+  document.getElementById('daily-date-label').textContent = 'Сегодня, ' + new Date().toLocaleDateString('ru-RU', {day:'numeric', month:'long'});
+  const prev = db.activity.find(a => a.mgr === id && a.date === today());
+  if (prev) {
+    ['found','book','ads','upd','newc','rep','dial','lc','la','lap'].forEach(f => {
+      const el = document.getElementById('d-' + f);
+      if (el) el.value = prev[f] || '';
+    });
+    const c = document.getElementById('d-comm');
+    if (c) c.value = prev.comm || '';
+  }
+  renderDayHistory(id);
+  renderMyMetrics(id);
+  renderMySales(id);
+  renderStat(id);
+}
+
+function mgrTab(t, btn) {
+  ['day','my','sales','stat'].forEach(x => {
+    const el = document.getElementById('t-' + x);
+    if (el) el.classList.remove('on');
+  });
+  document.querySelectorAll('#s-mgr .nav-btn').forEach(b => b.classList.remove('on'));
+  const el = document.getElementById('t-' + t);
+  if (el) el.classList.add('on');
+  if (btn) btn.classList.add('on');
+  if (t === 'stat') renderStat(currentUser);
+  if (t === 'my') { renderMyMetrics(currentUser); renderMySales(currentUser); }
+}
+
+async function saveDay() {
+  const id = currentUser;
+  const rec = {
+    mgr: id, date: today(),
+    found: Number(document.getElementById('d-found').value || 0),
+    book:  Number(document.getElementById('d-book').value  || 0),
+    ads:   Number(document.getElementById('d-ads').value   || 0),
+    upd:   Number(document.getElementById('d-upd').value   || 0),
+    newc:  Number(document.getElementById('d-newc').value  || 0),
+    rep:   Number(document.getElementById('d-rep').value   || 0),
+    dial:  Number(document.getElementById('d-dial').value  || 0),
+    lc:    Number(document.getElementById('d-lc').value    || 0),
+    la:    Number(document.getElementById('d-la').value    || 0),
+    lap:   Number(document.getElementById('d-lap').value   || 0),
+    comm:  document.getElementById('d-comm').value || ''
+  };
+  db.activity = db.activity.filter(a => !(a.mgr === id && a.date === today()));
+  db.activity.unshift(rec);
+  await saveDB();
+  const ok = document.getElementById('day-ok');
+  ok.style.display = 'block';
+  setTimeout(() => ok.style.display = 'none', 3000);
+  renderDayHistory(id);
+  renderMyMetrics(id);
+}
+
+function clearDay() {
+  ['found','book','ads','upd','newc','rep','dial','lc','la','lap'].forEach(f => {
+    const el = document.getElementById('d-' + f);
+    if (el) el.value = '';
+  });
+  const c = document.getElementById('d-comm');
+  if (c) c.value = '';
+}
+
+function renderDayHistory(id) {
+  const recs = db.activity.filter(a => a.mgr === id).slice(0, 7);
+  const el = document.getElementById('day-history');
+  if (!recs.length) { el.innerHTML = '<div class="empty">Записей пока нет</div>'; return; }
+  el.innerHTML = `<table><thead><tr>
+    <th style="width:60px">Дата</th>
+    <th style="width:40px">Брон.</th>
+    <th style="width:45px">Объявл.</th>
+    <th style="width:50px">Клиенты</th>
+    <th style="width:45px">Диалоги</th>
+    <th style="width:45px">Лизинг</th>
+  </tr></thead><tbody>` +
+  recs.map(r => `<tr>
+    <td>${fmtDate(r.date)}${r.date === today() ? ' <span class="badge bg">сег.</span>' : ''}</td>
+    <td>${r.book||0}</td>
+    <td>${(r.ads||0)+(r.upd||0)}</td>
+    <td>${(r.newc||0)+(r.rep||0)}</td>
+    <td>${r.dial||0}</td>
+    <td>${r.lc||0}</td>
+  </tr>`).join('') + '</tbody></table>';
+}
+
+function renderMyMetrics(id) {
+  const k = calcKpd(id);
+  const m = mgrById(id);
+  const planPct = m ? Math.round(k.rev / m.plan * 100) : 0;
+  const el = document.getElementById('my-metrics');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="m"><div class="m-v">${k.cnt}</div><div class="m-l">Продаж</div></div>
+    <div class="m"><div class="m-v">₽${fmt(k.rev)}</div><div class="m-l">Оборот</div><div class="m-s">план ${planPct}%</div></div>
+    <div class="m"><div class="m-v">₽${fmt(k.margin)}</div><div class="m-l">Маржа</div></div>
+    <div class="m"><div class="m-v">${k.contacts}</div><div class="m-l">Контактов</div></div>
+    <div class="m"><div class="m-v">${k.bookings}</div><div class="m-l">Бронирований</div></div>
+    ${k.marginAV > 0 ? `<div class="m"><div class="m-v">₽${fmt(k.marginAV)}</div><div class="m-l">АВ</div></div>` : ''}
+  `;
+}
+
+function renderMySales(id) {
+  const sales = db.sales.filter(s => s.mgr === id).slice(0, 30);
+  const tb = document.getElementById('my-sales-body');
+  if (!tb) return;
+  if (!sales.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Продаж пока нет</td></tr>'; return; }
+  const allSales = db.sales;
+  tb.innerHTML = sales.map(s => {
+    const idx = allSales.indexOf(s);
+    const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
+    const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : '';
+    return `<tr><td>${fmtDate(s.date)}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td></tr>`;
+  }).join('');
+}
+
+async function saveSale() {
+  const id = currentUser;
+  const rec = {
+    mgr: id,
+    date: document.getElementById('s-date').value,
+    client: document.getElementById('s-client').value,
+    tech: document.getElementById('s-tech').value,
+    sum: Number(document.getElementById('s-sum').value || 0),
+    margin: Number(document.getElementById('s-margin').value || 0),
+    type: document.getElementById('s-type').value,
+    status: document.getElementById('s-status').value,
+    comm: document.getElementById('s-comm').value || '',
+    ts: Date.now()
+  };
+  db.sales.unshift(rec);
+  await saveDB();
+  const ok = document.getElementById('sale-ok');
+  ok.style.display = 'block';
+  setTimeout(() => ok.style.display = 'none', 3000);
+  ['s-client','s-tech','s-sum','s-margin','s-comm'].forEach(f => {
+    const el = document.getElementById(f); if (el) el.value = '';
+  });
+  renderMySales(id);
+  renderMyMetrics(id);
+}
+
+function renderStat(id) {
+  const mo = today().slice(0,7);
+  const k = calcKpd(id, mo);
+  const m = mgrById(id);
+  const color = m ? m.color : '#185FA5';
+  const plan = getMonthPlan(id, mo);
+  const planMargin = Number(plan.margin||0);
+  const planAV = Number(plan.av||0);
+  const marginPct = planMargin > 0 ? Math.min(100, Math.round(k.margin/planMargin*100)) : null;
+  const avPct = planAV > 0 ? Math.min(100, Math.round((k.marginAV||0)/planAV*100)) : null;
+  const days = filterByMonth(db.activity.filter(a => a.mgr === id), 'date', mo).length || 1;
+  const contactsDay = Math.round(k.contacts / days * 10) / 10;
+  const bookDay = Math.round(k.bookings / days * 10) / 10;
+  const ctcSale = k.cnt > 0 && k.contacts > 0 ? Math.round(k.contacts / k.cnt) : '—';
+  const bkSale = k.cnt > 0 && k.bookings > 0 ? Math.round(k.bookings / k.cnt) : '—';
+  const convPct = k.contacts > 0 ? Math.round(k.cnt / k.contacts * 100) : 0;
+
+  const insights = [];
+  if (k.cnt > 0 && k.contacts > 0 && convPct >= 10) insights.push({t:'g', text:'Хорошая конверсия — '+convPct+'% контактов становятся продажами'});
+  if (k.leasing >= 5) insights.push({t:'g', text:'Активная работа с лизингом — '+k.leasing+' контактов'});
+  if (k.marginAV > 0) insights.push({t:'g', text:'Есть АВ-сделки — маржа ₽'+fmt(k.marginAV)});
+  if (k.bookings > 0 && k.cnt === 0) insights.push({t:'a', text:'Есть бронирования ('+k.bookings+'), но нет закрытых сделок — довести до конца'});
+  if (k.contacts > 0 && convPct < 5 && k.contacts > 10) insights.push({t:'a', text:'Низкая конверсия '+convPct+'% — разобрать качество диалогов'});
+  if (k.leasing < 2 && days > 3) insights.push({t:'a', text:'Мало контактов с лизинговыми менеджерами — '+k.leasing+' за месяц'});
+  if (k.contacts < 10 && days > 5) insights.push({t:'r', text:'Очень мало контактов с клиентами — '+k.contacts+' за месяц'});
+  if (!insights.length) insights.push({t:'b', text:'Заполняй данные каждый день — тогда появится полная картина'});
+
+  document.getElementById('stat-content').innerHTML = `
+    <div class="card">
+      <div class="sh">Финансовый результат за месяц</div>
+      <div class="metrics" style="margin-bottom:${planMargin||planAV?'12px':'0'}">
+        <div class="m"><div class="m-v">${k.cnt}</div><div class="m-l">Продаж закрыто</div></div>
+        <div class="m"><div class="m-v">₽${fmt(k.rev)}</div><div class="m-l">Оборот</div></div>
+        <div class="m"><div class="m-v">₽${fmt(k.margin)}</div><div class="m-l">Маржа</div></div>
+        ${k.cntAV > 0 ? `<div class="m"><div class="m-v">${k.cntAV}</div><div class="m-l">АВ-сделок</div></div>` : ''}
+        ${k.marginAV > 0 ? `<div class="m"><div class="m-v">₽${fmt(k.marginAV)}</div><div class="m-l">Маржа АВ</div></div>` : ''}
+      </div>
+      ${planMargin > 0 ? `
+      <div style="font-size:11px;color:#666;margin-bottom:4px">Выполнение плана по марже</div>
+      <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-bottom:4px">
+        <div style="height:100%;width:${marginPct}%;background:${marginPct>=100?'#1a7a4a':marginPct>=70?'#f0a500':'#c0392b'};border-radius:4px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#666;margin-bottom:8px">
+        <span>Факт ₽${fmt(k.margin)}</span><span>План ₽${fmt(planMargin)}</span>
+        <span style="font-weight:500;color:${marginPct>=100?'#1a7a4a':marginPct>=70?'#f0a500':'#c0392b'}">${marginPct}%</span>
+      </div>` : ''}
+      ${planAV > 0 ? `
+      <div style="font-size:11px;color:#666;margin-bottom:4px">Выполнение плана АВ</div>
+      <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-bottom:4px">
+        <div style="height:100%;width:${avPct}%;background:${avPct>=100?'#1a7a4a':avPct>=70?'#f0a500':'#c0392b'};border-radius:4px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#666">
+        <span>Факт ₽${fmt(k.marginAV||0)}</span><span>План ₽${fmt(planAV)}</span>
+        <span style="font-weight:500;color:${avPct>=100?'#1a7a4a':avPct>=70?'#f0a500':'#c0392b'}">${avPct}%</span>
+      </div>` : ''}
+    </div>
+
+    <div class="card">
+      <div class="sh">Активность за месяц</div>
+      <div class="metrics">
+        <div class="m"><div class="m-v">${k.contacts}</div><div class="m-l">Контактов</div><div class="m-s">${contactsDay}/день</div></div>
+        <div class="m"><div class="m-v">${k.bookings}</div><div class="m-l">Бронирований</div><div class="m-s">${bookDay}/день</div></div>
+        <div class="m"><div class="m-v">${k.leasing}</div><div class="m-l">Лизинг</div></div>
+        <div class="m"><div class="m-v">${k.ads}</div><div class="m-l">Объявлений</div></div>
+        <div class="m"><div class="m-v">${days}</div><div class="m-l">Дней внесено</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sh">Воронка продаж</div>
+      <div class="kpb"><div class="kpl">Конверсия контактов</div><div class="kpbg"><div class="kpf" style="width:${Math.min(100,convPct*5)}%;background:${color}"></div></div><div class="kpv">${convPct}%</div></div>
+      <div class="kpb"><div class="kpl">Контактов → 1 продажа</div><div class="kpbg"><div class="kpf" style="width:50%;background:#ddd"></div></div><div class="kpv">${ctcSale}</div></div>
+      <div class="kpb"><div class="kpl">Броней → 1 продажа</div><div class="kpbg"><div class="kpf" style="width:50%;background:#ddd"></div></div><div class="kpv">${bkSale}</div></div>
+    </div>
+
+    <div class="card">
+      <div class="sh">Выводы по работе</div>
+      ${insights.map(x=>`<div class="ins ${x.t}"><i class="ti ti-${x.t==='g'?'check':x.t==='a'?'alert-triangle':'circle-x'}"></i><span>${x.text}</span></div>`).join('')}
+    </div>
+  `;
+}
+
+function buildBoss() {
+  buildMonthFilter();
+  renderBossMetrics();
+  renderPlansForm();
+  renderBossRanking();
+  renderBossInsights();
+  buildTeamGrid();
+  buildFilterDropdowns();
+  renderAllSales();
+  renderActivity();
+}
+
+function bossTab(t, btn) {
+  ['main','team','all-sales','activity','plans'].forEach(x => {
+    const el = document.getElementById('b-' + x); if (el) el.classList.remove('on');
+  });
+  document.querySelectorAll('#s-boss .nav-btn').forEach(b => b.classList.remove('on'));
+  const el = document.getElementById('b-' + t); if (el) el.classList.add('on');
+  if (btn) btn.classList.add('on');
+  if (t === 'plans') renderPlansForm();
+}
+
+function renderBossMetrics() {
+  const m = currentMonth();
+  const closed = filterByMonth(db.sales.filter(s => s.status === 'Закрыта'), 'date', m);
+  const closedSales = closed.filter(x => x.type !== 'АВ');
+  const closedAV = closed.filter(x => x.type === 'АВ');
+  const totalRev  = closedSales.reduce((s,x) => s + Number(x.sum||0), 0);
+  const totalMarg = closedSales.reduce((s,x) => s + Number(x.margin||0), 0);
+  const totalMargAV = closedAV.reduce((s,x) => s + Number(x.margin||0), 0);
+  const totalCnt  = closedSales.length;
+  const totalPlan = MANAGERS.reduce((s,m) => s + m.plan, 0);
+  const totalMarginPlan = MANAGERS.reduce((s,mgr) => { const p = getMonthPlan(mgr.id, m); return s + Number(p.margin||0); }, 0);
+  const marginPct = totalMarginPlan > 0 ? Math.round(totalMarg / totalMarginPlan * 100) : null;
+  const pct = totalPlan > 0 ? Math.round(totalRev / totalPlan * 100) : 0;
+  const contacts = filterByMonth(db.activity, 'date', m).reduce((s,a) => s + Number(a.newc||0) + Number(a.rep||0), 0);
+  const leasing  = filterByMonth(db.activity, 'date', m).reduce((s,a) => s + Number(a.lc||0), 0);
+  document.getElementById('boss-metrics').innerHTML = `
+    <div class="m"><div class="m-v">₽${fmt(totalRev)}</div><div class="m-l">Оборот</div></div>
+    <div class="m"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж</div></div>
+    <div class="m"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа</div><div class="m-s">${marginPct !== null ? 'план '+marginPct+'%' : ''}</div></div>
+    <div class="m"><div class="m-v">₽${fmt(totalMargAV)}</div><div class="m-l">АВ</div></div>
+    <div class="m"><div class="m-v">${contacts}</div><div class="m-l">Контактов</div></div>
+    <div class="m"><div class="m-v">${leasing}</div><div class="m-l">Лизинг</div></div>
+    <div class="m"><div class="m-v">${marginPct !== null ? marginPct+'%' : '—'}</div><div class="m-l">План маржи</div></div>
+  `;
+}
+
+function renderBossRanking() {
+  const sorted = MANAGERS.map(m => ({m, k: calcKpd(m.id)})).sort((a,b) => b.k.kpd - a.k.kpd);
+  const medals = ['🥇','🥈','🥉','4','5','6'];
+  const el = document.getElementById('boss-ranking');
+  el.innerHTML = sorted.map((x,i) => `
+    <div class="row" style="cursor:pointer" onclick="bossOpenMgr('${x.m.id}')">
+      <div style="font-size:13px;width:20px;text-align:center;color:#666">${medals[i]}</div>
+      <div class="avatar ${x.m.cls}" style="width:28px;height:28px;font-size:10px">${x.m.name[0]}</div>
+      <div class="ri">
+        <div class="rn">${x.m.name}</div>
+        <div class="rs">${x.k.cnt} прод. · ₽${fmt(x.k.rev)} · марж. ₽${fmt(x.k.margin)}</div>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar-bg"><div class="bar-f" style="width:${(() => { const p = getMonthPlan(x.m.id, currentMonth()); const pm = Number(p.margin||0); return pm > 0 ? Math.min(100,Math.round(x.k.margin/pm*100)) : 0; })()}%;background:${x.m.color}"></div></div>
+        <div class="bv">${(() => { const p = getMonthPlan(x.m.id, currentMonth()); const pm = Number(p.margin||0); return pm > 0 ? Math.min(100,Math.round(x.k.margin/pm*100))+'% плана' : '₽'+fmt(x.k.margin); })()}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderBossInsights() {
+  const mo = currentMonth();
+  const el = document.getElementById('boss-insights');
+  const hasData = db.sales.length > 0 || db.activity.length > 0;
+  if (!hasData) {
+    el.innerHTML = '<div class="ins b"><i class="ti ti-info-circle"></i><span>Менеджеры ещё не заполнили данные.</span></div>';
+    return;
+  }
+  const sorted = MANAGERS.map(m => { const k = calcKpd(m.id, mo); const plan = getMonthPlan(m.id, mo); return {m, k, plan}; }).sort((a,b) => b.k.margin - a.k.margin);
+  let html = '';
+  sorted.forEach(({m, k, plan}) => {
+    const pm = Number(plan.margin||0);
+    const pa = Number(plan.av||0);
+    const pctM = pm > 0 ? Math.round(k.margin/pm*100) : null;
+    const pctA = pa > 0 ? Math.round((k.marginAV||0)/pa*100) : null;
+    const convPct = k.contacts > 0 ? Math.round(k.cnt/k.contacts*100) : 0;
+    const days = filterByMonth(db.activity.filter(a => a.mgr === m.id), 'date', mo).length || 0;
+
+    // Определяем статус менеджера
+    let status = 'b'; // синий по умолчанию
+    if (pctM !== null && pctM >= 100) status = 'g';
+    else if (pctM !== null && pctM < 50) status = 'r';
+    else if (k.cnt > 0) status = 'a';
+
+    // Формируем рекомендации
+    const recs = [];
+    if (k.cnt === 0 && days > 3) recs.push('нет закрытых сделок — разобрать воронку, довести бронирования до продажи');
+    else if (k.cnt === 0) recs.push('нет продаж, мало активности — нужно увеличить число контактов');
+    if (k.contacts > 0 && convPct < 5 && k.contacts > 8) recs.push(`низкая конверсия ${convPct}% — проработать качество диалогов`);
+    if (k.bookings > 0 && k.cnt === 0) recs.push(`есть ${k.bookings} бронирований — довести до закрытия`);
+    if (k.leasing < 2 && days > 5) recs.push('усилить работу с лизингом — минимум 2 контакта в неделю');
+    if (k.contacts < 8 && days > 5) recs.push('мало контактов с клиентами — поставить цель 3–4 в день');
+    if (pctM !== null && pctM >= 100 && k.marginAV === 0) recs.push('план по марже выполнен — подключить АВ-сделки для дополнительного результата');
+    if (pctM !== null && pctM >= 80 && pctM < 100) recs.push(`до плана осталось ₽${fmt(pm - k.margin)} — активнее закрывать открытые сделки`);
+    if (recs.length === 0 && k.cnt > 0) recs.push('хороший результат — поддерживать темп');
+
+    const marginLine = pm > 0 ? `маржа ${pctM}% от плана` : k.margin > 0 ? `маржа ₽${fmt(k.margin)}` : 'продаж нет';
+    const avLine = k.marginAV > 0 ? ` · АВ ₽${fmt(k.marginAV)}${pctA !== null ? ' ('+pctA+'%)' : ''}` : '';
+
+    html += `<div class="ins ${status}" style="margin-bottom:8px;flex-direction:column;align-items:flex-start">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;width:100%">
+        <div class="avatar ${m.cls}" style="width:22px;height:22px;font-size:9px;flex-shrink:0">${m.name[0]}</div>
+        <span style="font-weight:500;font-size:12px">${m.name}</span>
+        <span style="font-size:11px;color:#666;margin-left:auto">${k.cnt} прод. · ${marginLine}${avLine}</span>
+      </div>
+      <div style="font-size:11px;padding-left:30px">${recs.map(r => '→ '+r).join('<br>')}</div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function buildTeamGrid() {
+  const el = document.getElementById('team-grid');
+  const mo = currentMonth();
+  el.innerHTML = MANAGERS.map(m => {
+    const k = calcKpd(m.id, mo);
+    const plan = getMonthPlan(m.id, mo);
+    const pm = Number(plan.margin||0);
+    const pa = Number(plan.av||0);
+    const pctM = pm > 0 ? Math.round(k.margin/pm*100) : null;
+    const pctA = pa > 0 ? Math.round((k.marginAV||0)/pa*100) : null;
+    const colM = pctM===null?'#ddd':pctM>=100?'#1a7a4a':pctM>=70?'#f0a500':'#c0392b';
+    const colA = pctA===null?'#1a7a4a':pctA>=100?'#1a7a4a':pctA>=70?'#f0a500':'#c0392b';
+    return `<div class="mgr-card" onclick="bossOpenMgr('${m.id}')">
+      <div class="avatar ${m.cls}" style="width:36px;height:36px;font-size:13px">${m.name[0]}</div>
+      <div class="mgr-info" style="min-width:0">
+        <div class="mgr-name">${m.name}</div>
+        <div class="mgr-sub">${k.cnt} прод. · ₽${fmt(k.rev)} · марж. ₽${fmt(k.margin)}${k.marginAV > 0 ? ' · АВ ₽'+fmt(k.marginAV) : ''}</div>
+        ${pm > 0 ? `<div style="display:flex;align-items:center;gap:5px;margin-top:4px">
+          <div style="font-size:9px;color:#888;width:50px;flex-shrink:0">Маржа</div>
+          <div style="flex:1;height:4px;background:#eee;border-radius:2px;overflow:hidden"><div style="height:100%;width:${Math.min(100,pctM)}%;background:${colM};border-radius:2px"></div></div>
+          <span style="font-size:9px;font-weight:500;color:${colM};width:34px;text-align:right">${pctM}%</span>
+        </div>` : ''}
+        ${pa > 0 || k.marginAV > 0 ? `<div style="display:flex;align-items:center;gap:5px;margin-top:3px">
+          <div style="font-size:9px;color:#888;width:50px;flex-shrink:0">АВ</div>
+          <div style="flex:1;height:4px;background:#eee;border-radius:2px;overflow:hidden"><div style="height:100%;width:${pctA!==null?Math.min(100,pctA):100}%;background:${colA};border-radius:2px"></div></div>
+          <span style="font-size:9px;font-weight:500;color:${colA};width:34px;text-align:right">${pctA!==null?pctA+'%':'₽'+fmt(k.marginAV||0)}</span>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function bossOpenMgr(id) {
+  bossTab('team', document.querySelectorAll('#s-boss .nav-btn')[1]);
+  const m = mgrById(id); const k = calcKpd(id);
+  const mo = currentMonth();
+  const planPct = Math.round(k.rev / m.plan * 100);
+  const mAct = filterByMonth(db.activity.filter(a => a.mgr === id), 'date', mo);
+  const days = mAct.length || 1;
+  const actDay = Math.round((k.contacts + k.bookings) / days);
+  const ctcSale = k.cnt > 0 && k.contacts > 0 ? Math.round(k.contacts / k.cnt) : '—';
+  const bkSale  = k.cnt > 0 && k.bookings > 0 ? Math.round(k.bookings / k.cnt) : '—';
+  const recentSales = filterByMonth(db.sales.filter(s => s.mgr === id), 'date', mo).slice(0,4);
+  const recentAct = mAct.slice(0,3);
+  const det = document.getElementById('team-detail');
+  det.style.display = 'block';
+  det.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div class="avatar ${m.cls}" style="width:44px;height:44px;font-size:16px">${m.name[0]}</div>
+      <div>
+        <div style="font-size:15px;font-weight:500">${m.name}</div>
+        <span class="badge bb">план маржи ${planPct}%</span>
+      </div>
+    </div>
+    <div class="metrics" style="margin-bottom:12px">
+      <div class="m"><div class="m-v">${k.cnt}</div><div class="m-l">Продаж</div></div>
+      <div class="m"><div class="m-v">₽${fmt(k.rev)}</div><div class="m-l">Оборот</div></div>
+      <div class="m"><div class="m-v">₽${fmt(k.margin)}</div><div class="m-l">Маржа</div></div>
+      ${k.marginAV > 0 ? `<div class="m"><div class="m-v">₽${fmt(k.marginAV)}</div><div class="m-l">АВ</div></div>` : ''}
+      <div class="m"><div class="m-v">${k.contacts}</div><div class="m-l">Контактов</div></div>
+      <div class="m"><div class="m-v">${k.leasing}</div><div class="m-l">Лизинг</div></div>
+    </div>
+    <div class="sl">Выполнение планов</div>
+    ${(() => { const pm = Number(getMonthPlan(id, mo).margin||0); const pctM = pm > 0 ? Math.min(100,Math.round(k.margin/pm*100)) : null; const cM = pctM===null?'#ddd':pctM>=100?'#1a7a4a':pctM>=70?'#f0a500':'#c0392b'; return `<div class="kpb"><div class="kpl">Маржа от продаж</div><div class="kpbg"><div class="kpf" style="width:${pctM||0}%;background:${cM}"></div></div><div class="kpv">${pctM!==null?pctM+'%':'—'}</div></div>`; })()}
+    ${(() => { const pa = Number(getMonthPlan(id, mo).av||0); const pctA = pa > 0 ? Math.min(100,Math.round((k.marginAV||0)/pa*100)) : null; const cA = pctA===null?'#ddd':pctA>=100?'#1a7a4a':pctA>=70?'#f0a500':'#c0392b'; return `<div class="kpb"><div class="kpl">АВ</div><div class="kpbg"><div class="kpf" style="width:${pctA||0}%;background:${cA}"></div></div><div class="kpv">${pctA!==null?pctA+'%':k.marginAV>0?'₽'+fmt(k.marginAV):'—'}</div></div>`; })()}
+    <div class="sl">Воронка</div>
+    <div class="kpb"><div class="kpl">Контактов на продажу</div><div class="kpbg"><div class="kpf" style="width:50%;background:#ddd"></div></div><div class="kpv">${ctcSale}</div></div>
+    <div class="kpb"><div class="kpl">Броней на продажу</div><div class="kpbg"><div class="kpf" style="width:50%;background:#ddd"></div></div><div class="kpv">${bkSale}</div></div>
+    <div class="kpb"><div class="kpl">Действий в день</div><div class="kpbg"><div class="kpf" style="width:${Math.min(100,actDay*15)}%;background:#ddd"></div></div><div class="kpv">${actDay}</div></div>
+    <div class="sl">Сделки за период</div>
+    ${recentSales.map(s => `
+      <div class="row">
+        <div class="ri"><div class="rn">${s.client||'—'} · ${s.tech||'—'}</div><div class="rs">₽${fmt(s.sum)} · ${fmtDate(s.date)}</div></div>
+        <span class="badge ${s.status==='Закрыта'?'bg':s.status==='В работе'||s.status==='Аванс получен'?'ba':'br'}">${s.status}</span>
+      </div>`).join('') || '<div class="empty">Продаж нет</div>'}
+    <div class="sl">Активность за период</div>
+    ${recentAct.map(a => `
+      <div class="row">
+        <div class="ri">
+          <div class="rn">${fmtDate(a.date)} — клиенты: ${(a.newc||0)+(a.rep||0)}, диалоги: ${a.dial||0}, лизинг: ${a.lc||0}</div>
+          ${a.comm ? `<div class="rs">${a.comm}</div>` : ''}
+        </div>
+      </div>`).join('') || '<div class="empty">Активности нет</div>'}
+  `;
+}
+
+function buildFilterDropdowns() {
+  const opts = MANAGERS.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  document.getElementById('filter-mgr').innerHTML = '<option value="">Все менеджеры</option>' + opts;
+  document.getElementById('act-filter-mgr').innerHTML = '<option value="">Все менеджеры</option>' + opts;
+}
+
+function renderAllSales() {
+  const mgrF    = document.getElementById('filter-mgr').value;
+  const typeF   = document.getElementById('filter-type').value;
+  const statF   = document.getElementById('filter-status').value;
+  const m = currentMonth();
+  let sales = filterByMonth(db.sales, 'date', m);
+  if (mgrF)  sales = sales.filter(s => s.mgr === mgrF);
+  if (typeF) sales = sales.filter(s => s.type === typeF);
+  if (statF) sales = sales.filter(s => s.status === statF);
+  const tb  = document.getElementById('all-sales-body');
+  const tot = document.getElementById('all-sales-total');
+  if (!sales.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Нет данных</td></tr>'; tot.textContent = ''; return; }
+  const allSalesRef = db.sales;
+  tb.innerHTML = sales.map(s => {
+    const idx = allSalesRef.indexOf(s);
+    const mgr = mgrById(s.mgr);
+    const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
+    const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : s.type === 'АВ' ? 'ba' : '';
+    return `<tr>
+      <td>${fmtDate(s.date)}</td>
+      <td><span style="font-weight:500">${mgr?mgr.name:s.mgr}</span></td>
+      <td>${s.client||''}</td>
+      <td>${s.tech||''}</td>
+      <td>₽${fmt(s.sum||0)}</td>
+      <td><span class="badge ${tc}">${s.type||''}</span></td>
+      <td><span class="badge ${sc}">${s.status||''}</span></td>
+      <td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td>
+    </tr>`;
+  }).join('');
+  const closed = sales.filter(s => s.status === 'Закрыта');
+  const totalRev  = closed.reduce((s,x) => s + Number(x.sum||0), 0);
+  const totalMarg = closed.reduce((s,x) => s + Number(x.margin||0), 0);
+  tot.textContent = `Закрытых: ${closed.length} · Оборот: ₽${fmt(totalRev)} · Маржа: ₽${fmt(totalMarg)}`;
+}
+
+function renderActivity() {
+  const mgrF = document.getElementById('act-filter-mgr').value;
+  const m = currentMonth();
+  let acts = filterByMonth(db.activity, 'date', m);
+  if (mgrF) acts = acts.filter(a => a.mgr === mgrF);
+  const tb = document.getElementById('activity-body');
+  if (!acts.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Нет данных</td></tr>'; return; }
+  tb.innerHTML = acts.slice(0, 50).map(a => {
+    const m = mgrById(a.mgr);
+    return `<tr>
+      <td>${fmtDate(a.date)}${a.date === today() ? ' <span class="badge bg">сег.</span>' : ''}</td>
+      <td>${m ? m.name : a.mgr}</td>
+      <td>${a.book||0}</td>
+      <td>${(a.ads||0)+(a.upd||0)}</td>
+      <td>${(a.newc||0)+(a.rep||0)}</td>
+      <td>${a.dial||0}</td>
+      <td>${a.lc||0}</td>
+      <td style="font-size:10px;color:#666">${(a.comm||'').slice(0,40)}</td>
+    </tr>`;
+  }).join('');
+}
+
+let editIdx = -1;
+
+function openEditModal(idx) {
+  const s = db.sales[idx];
+  if (!s) return;
+  editIdx = idx;
+  document.getElementById('e-date').value = s.date || today();
+  document.getElementById('e-client').value = s.client || '';
+  document.getElementById('e-tech').value = s.tech || '';
+  document.getElementById('e-sum').value = s.sum || 0;
+  document.getElementById('e-margin').value = s.margin || 0;
+  document.getElementById('e-type').value = s.type || 'Наличные';
+  document.getElementById('e-status').value = s.status || 'В работе';
+  document.getElementById('e-comm').value = s.comm || '';
+  document.getElementById('edit-modal').classList.add('on');
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').classList.remove('on');
+  editIdx = -1;
+}
+
+async function saveEditSale() {
+  if (editIdx < 0) return;
+  db.sales[editIdx] = {
+    ...db.sales[editIdx],
+    date: document.getElementById('e-date').value,
+    client: document.getElementById('e-client').value,
+    tech: document.getElementById('e-tech').value,
+    sum: Number(document.getElementById('e-sum').value || 0),
+    margin: Number(document.getElementById('e-margin').value || 0),
+    type: document.getElementById('e-type').value,
+    status: document.getElementById('e-status').value,
+    comm: document.getElementById('e-comm').value || ''
+  };
+  await saveDB();
+  const ok = document.getElementById('edit-ok');
+  ok.style.display = 'block';
+  setTimeout(() => {
+    ok.style.display = 'none';
+    closeEditModal();
+    renderMySales(currentUser);
+    renderMyMetrics(currentUser);
+    if (currentUser === 'boss') buildBoss();
+  }, 1500);
+}
+
+
+function getMonthPlan(mgrId, month) {
+  if (!db.plans) return {margin: 0, av: 0};
+  const key = mgrId + '_' + month;
+  return db.plans[key] || {margin: 0, av: 0};
+}
+
+function renderPlansForm() {
+  const month = currentMonth();
+  const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const [y, mo] = month.split('-');
+  const el = document.getElementById('plans-form');
+  if (!el) return;
+  el.innerHTML = '<div style="font-size:12px;font-weight:500;color:#666;margin-bottom:10px">' + MONTHS_RU[parseInt(mo)-1] + ' ' + y + '</div>' +
+    MANAGERS.map(m => {
+      const plan = getMonthPlan(m.id, month);
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #f0f0f0">
+        <div class="avatar ${m.cls}" style="width:28px;height:28px;font-size:10px;flex-shrink:0">${m.name[0]}</div>
+        <div style="font-size:12px;font-weight:500;width:70px;flex-shrink:0">${m.name}</div>
+        <div style="flex:1">
+          <div style="font-size:10px;color:#666;margin-bottom:2px">План по марже, ₽</div>
+          <input type="number" min="0" step="1000" id="plan-margin-${m.id}" value="${plan.margin||''}" placeholder="0" style="width:100%;font-size:12px;padding:6px 8px;border:1px solid #ddd;border-radius:8px;font-family:inherit">
+        </div>
+        <div style="flex:1">
+          <div style="font-size:10px;color:#666;margin-bottom:2px">План АВ, ₽</div>
+          <input type="number" min="0" step="1000" id="plan-av-${m.id}" value="${plan.av||''}" placeholder="0" style="width:100%;font-size:12px;padding:6px 8px;border:1px solid #ddd;border-radius:8px;font-family:inherit">
+        </div>
+      </div>`;
+    }).join('');
+  renderPlansProgress();
+}
+
+function renderPlansProgress() {
+  const month = currentMonth();
+  const el = document.getElementById('plans-progress');
+  if (!el) return;
+  el.innerHTML = MANAGERS.map(m => {
+    const plan = getMonthPlan(m.id, month);
+    const k = calcKpd(m.id);
+    const planMargin = Number(plan.margin) || 0;
+    const pct = planMargin > 0 ? Math.min(100, Math.round(k.margin / planMargin * 100)) : null;
+    const diff = planMargin > 0 ? k.margin - planMargin : null;
+    const barColor = pct === null ? '#ddd' : pct >= 100 ? '#1a7a4a' : pct >= 70 ? '#f0a500' : '#c0392b';
+    return `<div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div class="avatar ${m.cls}" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${m.name[0]}</div>
+        <div style="font-size:12px;font-weight:500;flex:1">${m.name}</div>
+        ${pct !== null ? `<span class="badge" style="background:${barColor}20;color:${barColor}">${pct}%</span>` : '<span style="font-size:11px;color:#999">план не задан</span>'}
+      </div>
+      ${planMargin > 0 ? `
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;height:8px;background:#eee;border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .4s"></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:#666;margin-top:3px">
+        <span>Факт: ₽${fmt(k.margin)}</span>
+        <span>План: ₽${fmt(planMargin)}</span>
+        <span style="color:${diff>=0?'#1a7a4a':'#c0392b'}">${diff>=0?'+':''}₽${fmt(diff)}</span>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function savePlans() {
+  const month = currentMonth();
+  if (!db.plans) db.plans = {};
+  MANAGERS.forEach(m => {
+    const key = m.id + '_' + month;
+    const valMargin = Number(document.getElementById('plan-margin-' + m.id).value || 0);
+    const valAV = Number(document.getElementById('plan-av-' + m.id).value || 0);
+    db.plans[key] = {margin: valMargin, av: valAV};
+  });
+  await saveDB();
+  const ok = document.getElementById('plans-ok');
+  ok.style.display = 'block';
+  setTimeout(() => ok.style.display = 'none', 3000);
+  renderPlansProgress();
+  renderBossRanking();
+}
+
+async function init() {
+  const ok = await loadDB();
+  if (!ok) {
+    document.getElementById('login-list').innerHTML = '<div class="empty" style="color:#c0392b">Ошибка загрузки данных. Проверьте подключение к интернету и обновите страницу.</div>';
+    return;
+  }
+  buildLogin();
+  setInterval(async () => {
+    if (!currentUser) return;
+    await loadDB();
+    if (currentUser === 'boss') {
+      renderBossMetrics();
+      renderBossRanking();
+      renderBossInsights();
+      renderAllSales();
+      renderActivity();
+      buildTeamGrid();
+      // НЕ вызываем renderPlansForm() — чтобы не сбрасывать введённые данные
+    } else {
+      renderMyMetrics(currentUser);
+      renderDayHistory(currentUser);
+    }
+  }, 30000);
+}
+
+init();
+</script>
+</body>
+</html>
