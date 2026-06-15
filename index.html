@@ -635,8 +635,6 @@ async function saveDay() {
     rep:   Number(document.getElementById('d-rep').value   || 0),
     dial:  Number(document.getElementById('d-dial').value  || 0),
     lc:    Number(document.getElementById('d-lc').value    || 0),
-    la:    Number(document.getElementById('d-la').value    || 0),
-    lap:   Number(document.getElementById('d-lap').value   || 0),
     comm:  document.getElementById('d-comm').value || ''
   };
   db.activity = db.activity.filter(a => !(a.mgr === id && a.date === today()));
