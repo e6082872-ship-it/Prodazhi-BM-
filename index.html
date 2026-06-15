@@ -164,7 +164,7 @@ tr:last-child td{border-bottom:none}
       <div class="sh">Мои сделки</div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th style="width:50px">Дата</th><th style="width:55px">Отгрузка</th><th style="width:90px">Клиент</th><th style="width:80px">Техника</th><th style="width:60px">Сумма</th><th style="width:50px">Тип</th><th style="width:60px">Статус</th><th style="width:100px">Бонус</th><th style="width:30px"></th></tr></thead>
+          <thead><tr><th style="width:50px">Дата</th><th style="width:55px">Отгрузка</th><th style="width:35px">Комп.</th><th style="width:90px">Клиент</th><th style="width:80px">Техника</th><th style="width:60px">Сумма</th><th style="width:50px">Тип</th><th style="width:60px">Статус</th><th style="width:100px">Бонус</th><th style="width:30px"></th></tr></thead>
           <tbody id="my-sales-body"></tbody>
         </table>
       </div>
@@ -174,17 +174,27 @@ tr:last-child td{border-bottom:none}
   <div id="t-sales" class="screen">
     <div class="card">
       <div class="sh">Добавить продажу</div>
-      <div class="fgrid">
-        <div class="fl"><label>Дата</label><input type="date" id="s-date"></div>
-        <div class="fl"><label>Клиент</label><input type="text" id="s-client" placeholder="ООО / ИП / ФИО"></div>
-        <div class="fl span2"><label>Техника</label><input type="text" id="s-tech" placeholder="Марка, модель"></div>
-        <div class="fl"><label>Дата отгрузки</label><input type="date" id="s-ship-date"></div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Клиент</div>
+      <div class="fgrid" style="margin-bottom:0">
+        <div class="fl"><label>Компания (БМ / АС)</label><select id="s-company"><option>БМ</option><option>АС</option></select></div>
+        <div class="fl"><label>Клиент (компания/ИП)</label><input type="text" id="s-client" placeholder="ООО / ИП / ФИО"></div>
+        <div class="fl"><label>Имя контакта</label><input type="text" id="s-contact-name" placeholder="Имя менеджера/владельца"></div>
+        <div class="fl"><label>Телефон</label><input type="text" id="s-contact-phone" placeholder="+7..."></div>
+      </div>
+      <div style="font-size:11px;color:#888;margin:12px 0 8px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Техника и сделка</div>
+      <div class="fgrid" style="margin-bottom:0">
+        <div class="fl"><label>Дата сделки</label><input type="date" id="s-date"></div>
+        <div class="fl"><label>Тип оплаты</label><select id="s-type"><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select></div>
+        <div class="fl span2"><label>Техника</label><input type="text" id="s-tech" placeholder="Марка, модель, год"></div>
         <div class="fl"><label>Сумма сделки, ₽</label><input type="number" min="0" step="1000" id="s-sum" placeholder="0" oninput="calcMarginAuto()"></div>
         <div class="fl"><label>Сумма покупки, ₽</label><input type="number" min="0" step="1000" id="s-purchase" placeholder="0" oninput="calcMarginAuto()"></div>
         <div class="fl"><label>Расходы, ₽</label><input type="number" min="0" step="1000" id="s-expense" placeholder="0" oninput="calcMarginAuto()"></div>
         <div class="fl"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="s-margin" placeholder="0" style="background:#f8f8f8" readonly></div>
-        <div class="fl"><label>Тип оплаты</label><select id="s-type"><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select></div>
+      </div>
+      <div style="font-size:11px;color:#888;margin:12px 0 8px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Статус и закрытие</div>
+      <div class="fgrid">
         <div class="fl"><label>Статус</label><select id="s-status"><option>Аванс получен</option><option>В работе</option><option>Закрыта</option><option>Отменена</option></select></div>
+        <div class="fl"><label>Дата отгрузки</label><input type="date" id="s-ship-date"></div>
         <div class="fl"><label>Бонус, ₽ (только при закрытии)</label><input type="number" min="0" step="100" id="s-bonus" placeholder="0"></div>
         <div class="fl"><label>Комментарий к бонусу</label><input type="text" id="s-bonus-comm" placeholder="Описание бонуса..."></div>
         <div class="fl span2"><label>Комментарий</label><textarea id="s-comm" placeholder="Детали сделки..."></textarea></div>
@@ -243,13 +253,14 @@ tr:last-child td{border-bottom:none}
     <div class="card">
       <div class="sh">Все продажи</div>
       <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <select id="filter-company" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">БМ + АС</option><option>БМ</option><option>АС</option></select>
         <select id="filter-mgr" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Все менеджеры</option></select>
         <select id="filter-type" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Любой тип</option><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select>
         <select id="filter-status" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Любой статус</option><option>Закрыта</option><option>В работе</option><option>Аванс получен</option><option>Отменена</option></select>
       </div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th style="width:50px">Дата</th><th style="width:55px">Отгрузка</th><th style="width:65px">Менеджер</th><th style="width:80px">Клиент</th><th style="width:70px">Техника</th><th style="width:55px">Сумма</th><th style="width:45px">Тип</th><th style="width:60px">Статус</th><th style="width:70px">Бонус</th><th style="width:30px"></th></tr></thead>
+          <thead><tr><th style="width:50px">Дата</th><th style="width:55px">Отгрузка</th><th style="width:35px">Комп.</th><th style="width:65px">Менеджер</th><th style="width:80px">Клиент</th><th style="width:70px">Техника</th><th style="width:55px">Сумма</th><th style="width:45px">Тип</th><th style="width:60px">Статус</th><th style="width:70px">Бонус</th><th style="width:30px"></th></tr></thead>
           <tbody id="all-sales-body"></tbody>
         </table>
       </div>
@@ -299,16 +310,19 @@ tr:last-child td{border-bottom:none}
       <button class="modal-close" onclick="closeEditModal()">×</button>
     </div>
     <div class="fgrid">
-      <div class="fl"><label>Дата</label><input type="date" id="e-date"></div>
+      <div class="fl"><label>Компания</label><select id="e-company"><option>БМ</option><option>АС</option></select></div>
+      <div class="fl"><label>Дата сделки</label><input type="date" id="e-date"></div>
       <div class="fl"><label>Клиент</label><input type="text" id="e-client" placeholder="ООО / ИП / ФИО"></div>
+      <div class="fl"><label>Имя контакта</label><input type="text" id="e-contact-name" placeholder="Имя менеджера/владельца"></div>
+      <div class="fl"><label>Телефон</label><input type="text" id="e-contact-phone" placeholder="+7..."></div>
       <div class="fl span2"><label>Техника</label><input type="text" id="e-tech" placeholder="Марка, модель"></div>
-      <div class="fl"><label>Дата отгрузки</label><input type="date" id="e-ship-date"></div>
-      <div class="fl" style="display:flex;align-items:flex-end"><div style="width:100%"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="e-margin" placeholder="0" style="background:#f8f8f8" readonly></div></div>
+      <div class="fl"><label>Тип оплаты</label><select id="e-type"><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select></div>
       <div class="fl"><label>Сумма сделки, ₽</label><input type="number" min="0" step="1000" id="e-sum" placeholder="0" oninput="calcMarginAutoEdit()"></div>
       <div class="fl"><label>Сумма покупки, ₽</label><input type="number" min="0" step="1000" id="e-purchase" placeholder="0" oninput="calcMarginAutoEdit()"></div>
       <div class="fl"><label>Расходы, ₽</label><input type="number" min="0" step="1000" id="e-expense" placeholder="0" oninput="calcMarginAutoEdit()"></div>
-      <div class="fl"><label>Тип оплаты</label><select id="e-type"><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select></div>
+      <div class="fl"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="e-margin" placeholder="0" style="background:#f8f8f8" readonly></div>
       <div class="fl"><label>Статус</label><select id="e-status"><option>Аванс получен</option><option>В работе</option><option>Закрыта</option><option>Отменена</option></select></div>
+      <div class="fl"><label>Дата отгрузки</label><input type="date" id="e-ship-date"></div>
       <div class="fl"><label>Бонус, ₽</label><input type="number" min="0" step="100" id="e-bonus" placeholder="0"></div>
       <div class="fl"><label>Комментарий к бонусу</label><input type="text" id="e-bonus-comm" placeholder="Описание бонуса..."></div>
       <div class="fl span2"><label>Комментарий</label><textarea id="e-comm" placeholder="Детали сделки..."></textarea></div>
@@ -693,7 +707,8 @@ function renderMySales(id) {
     const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
     const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : s.type === 'АВ' ? 'ba' : '';
     const bonusCell = s.status === 'Закрыта' && s.bonus > 0 ? `<span class="badge bg">+₽${fmt(s.bonus)}${s.bonusComm?' · '+s.bonusComm:''}</span>` : '';
-    return `<tr><td>${fmtDate(s.date)}</td><td>${s.shipDate?fmtDate(s.shipDate):'—'}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td>${bonusCell}</td><td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td></tr>`;
+    const compBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+    return `<tr><td>${fmtDate(s.date)}</td><td>${s.shipDate?fmtDate(s.shipDate):'—'}</td><td>${compBadge}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td>${bonusCell}</td><td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td></tr>`;
   }).join('');
 }
 
@@ -702,9 +717,12 @@ async function saveSale() {
   const sStatus = document.getElementById('s-status').value;
   const rec = {
     mgr: id,
+    company: document.getElementById('s-company').value,
     date: document.getElementById('s-date').value,
     shipDate: document.getElementById('s-ship-date').value || '',
     client: document.getElementById('s-client').value,
+    contactName: document.getElementById('s-contact-name').value || '',
+    contactPhone: document.getElementById('s-contact-phone').value || '',
     tech: document.getElementById('s-tech').value,
     sum: Number(document.getElementById('s-sum').value || 0),
     purchase: Number(document.getElementById('s-purchase').value || 0),
@@ -722,7 +740,7 @@ async function saveSale() {
   const ok = document.getElementById('sale-ok');
   ok.style.display = 'block';
   setTimeout(() => ok.style.display = 'none', 3000);
-  ['s-client','s-tech','s-sum','s-margin','s-purchase','s-expense','s-bonus','s-bonus-comm','s-comm','s-ship-date'].forEach(f => {
+  ['s-company','s-client','s-contact-name','s-contact-phone','s-tech','s-sum','s-margin','s-purchase','s-expense','s-bonus','s-bonus-comm','s-comm','s-ship-date'].forEach(f => {
     const el = document.getElementById(f); if (el) el.value = '';
   });
   renderMySales(id);
@@ -849,10 +867,18 @@ function renderBossMetrics() {
   const contacts = filterByMonth(db.activity, 'date', m).reduce((s,a) => s + Number(a.newc||0) + Number(a.rep||0), 0);
   const leasing  = filterByMonth(db.activity, 'date', m).reduce((s,a) => s + Number(a.lc||0), 0);
   const totalBonus = filterByMonth(db.sales.filter(s => s.status === 'Закрыта'), 'date', m).reduce((s,x) => s + Number(x.bonus||0), 0);
+  const bmClosed = filterByMonth(db.sales.filter(s => s.status === 'Закрыта' && (s.company||'БМ') === 'БМ' && s.type !== 'АВ'), 'date', m);
+  const asClosed = filterByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.company === 'АС' && s.type !== 'АВ'), 'date', m);
+  const bmMarg = bmClosed.reduce((s,x) => s + Number(x.margin||0), 0);
+  const asMarg = asClosed.reduce((s,x) => s + Number(x.margin||0), 0);
+  const bmCnt = bmClosed.length;
+  const asCnt = asClosed.length;
   document.getElementById('boss-metrics').innerHTML = `
     <div class="m"><div class="m-v">₽${fmt(totalRev)}</div><div class="m-l">Оборот</div></div>
     <div class="m"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж</div></div>
-    <div class="m"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа</div><div class="m-s">${marginPct !== null ? 'план '+marginPct+'%' : ''}</div></div>
+    <div class="m"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа (всего)</div><div class="m-s">${marginPct !== null ? 'план '+marginPct+'%' : ''}</div></div>
+    <div class="m"><div class="m-v">₽${fmt(bmMarg)}</div><div class="m-l">Маржа БМ</div><div class="m-s">${bmCnt} прод.</div></div>
+    <div class="m"><div class="m-v">₽${fmt(asMarg)}</div><div class="m-l">Маржа АС</div><div class="m-s">${asCnt} прод.</div></div>
     <div class="m"><div class="m-v">₽${fmt(totalMargAV)}</div><div class="m-l">АВ</div></div>
     <div class="m"><div class="m-v">₽${fmt(totalBonus)}</div><div class="m-l">Бонусы</div></div>
     <div class="m"><div class="m-v">${marginPct !== null ? marginPct+'%' : '—'}</div><div class="m-l">% плана маржи</div></div>
@@ -1026,11 +1052,13 @@ function buildFilterDropdowns() {
 }
 
 function renderAllSales() {
+  const compF   = document.getElementById('filter-company').value;
   const mgrF    = document.getElementById('filter-mgr').value;
   const typeF   = document.getElementById('filter-type').value;
   const statF   = document.getElementById('filter-status').value;
   const m = currentMonth();
   let sales = filterByMonth(db.sales, 'date', m);
+  if (compF) sales = sales.filter(s => (s.company||'БМ') === compF);
   if (mgrF)  sales = sales.filter(s => s.mgr === mgrF);
   if (typeF) sales = sales.filter(s => s.type === typeF);
   if (statF) sales = sales.filter(s => s.status === statF);
@@ -1044,9 +1072,11 @@ function renderAllSales() {
     const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
     const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : s.type === 'АВ' ? 'ba' : '';
     const bCell = s.status === 'Закрыта' && s.bonus > 0 ? `<span class="badge bg">+₽${fmt(s.bonus)}</span>` : '';
+    const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
     return `<tr>
       <td>${fmtDate(s.date)}</td>
       <td>${s.shipDate?fmtDate(s.shipDate):'—'}</td>
+      <td>${cBadge}</td>
       <td><span style="font-weight:500">${mgr?mgr.name:s.mgr}</span></td>
       <td>${s.client||''}</td>
       <td>${s.tech||''}</td>
@@ -1060,7 +1090,11 @@ function renderAllSales() {
   const closed = sales.filter(s => s.status === 'Закрыта');
   const totalRev  = closed.reduce((s,x) => s + Number(x.sum||0), 0);
   const totalMarg = closed.reduce((s,x) => s + Number(x.margin||0), 0);
-  tot.textContent = `Закрытых: ${closed.length} · Оборот: ₽${fmt(totalRev)} · Маржа: ₽${fmt(totalMarg)}`;
+  const bmMarg = closed.filter(x=>(x.company||'БМ')==='БМ').reduce((s,x)=>s+Number(x.margin||0),0);
+  const asMarg = closed.filter(x=>x.company==='АС').reduce((s,x)=>s+Number(x.margin||0),0);
+  const bmCnt = closed.filter(x=>(x.company||'БМ')==='БМ').length;
+  const asCnt = closed.filter(x=>x.company==='АС').length;
+  tot.innerHTML = `Закрытых: ${closed.length} · Оборот: ₽${fmt(totalRev)} · Маржа: ₽${fmt(totalMarg)} &nbsp;|&nbsp; <span class="badge bb">БМ</span> ${bmCnt} прод. ₽${fmt(bmMarg)} &nbsp; <span class="badge ba">АС</span> ${asCnt} прод. ₽${fmt(asMarg)}`;
 }
 
 function renderActivity() {
@@ -1107,8 +1141,11 @@ function openEditModal(idx) {
   const s = db.sales[idx];
   if (!s) return;
   editIdx = idx;
+  document.getElementById('e-company').value = s.company || 'БМ';
   document.getElementById('e-date').value = s.date || today();
   document.getElementById('e-client').value = s.client || '';
+  document.getElementById('e-contact-name').value = s.contactName || '';
+  document.getElementById('e-contact-phone').value = s.contactPhone || '';
   document.getElementById('e-tech').value = s.tech || '';
   document.getElementById('e-sum').value = s.sum || 0;
   document.getElementById('e-margin').value = s.margin || 0;
@@ -1133,9 +1170,12 @@ async function saveEditSale() {
   if (editIdx < 0) return;
   db.sales[editIdx] = {
     ...db.sales[editIdx],
+    company: document.getElementById('e-company').value,
     date: document.getElementById('e-date').value,
     shipDate: document.getElementById('e-ship-date').value || '',
     client: document.getElementById('e-client').value,
+    contactName: document.getElementById('e-contact-name').value || '',
+    contactPhone: document.getElementById('e-contact-phone').value || '',
     tech: document.getElementById('e-tech').value,
     sum: Number(document.getElementById('e-sum').value || 0),
     margin: Number(document.getElementById('e-margin').value || 0),
