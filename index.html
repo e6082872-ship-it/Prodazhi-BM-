@@ -141,8 +141,6 @@ tr:last-child td{border-bottom:none}
         <div class="fl"><label>Выставлено объявлений сегодня</label><input type="number" min="0" step="1" id="d-upd" placeholder="0"></div>
         <div class="fl"><label>Новых клиентов</label><input type="number" min="0" step="1" id="d-newc" placeholder="0"></div>
         <div class="fl"><label>Повторных контактов</label><input type="number" min="0" step="1" id="d-rep" placeholder="0"></div>
-        <div class="fl"><label>Качественных диалогов</label><input type="number" min="0" step="1" id="d-dial" placeholder="0"></div>
-        <div class="fl"><label>Контакты лизинг. менедж.</label><input type="number" min="0" step="1" id="d-lc" placeholder="0"></div>
         <div class="fl span2"><label>Комментарий</label><textarea id="d-comm" placeholder="Что сделал, планы, сложности..."></textarea></div>
       </div>
       <div style="display:flex;gap:8px">
@@ -286,19 +284,28 @@ tr:last-child td{border-bottom:none}
 
   <div id="b-activity" class="screen">
     <div class="card">
-      <div class="sh">Ежедневная активность команды</div>
-      <div style="margin-bottom:10px">
+      <div class="sh">Сводка активности</div>
+      <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
         <select id="act-filter-mgr" onchange="renderActivity()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Все менеджеры</option></select>
+        <select id="act-period" onchange="renderActivity()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff">
+          <option value="month">За месяц (выбранный период)</option>
+          <option value="today">За сегодня</option>
+        </select>
       </div>
+      <div class="metrics" id="activity-summary"></div>
+    </div>
+    <div class="card">
+      <div class="sh">Ежедневная активность команды</div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th style="width:55px">Дата</th><th style="width:65px">Менеджер</th><th style="width:35px">Брон.</th><th style="width:40px">Объявл.</th><th style="width:40px">Клиенты</th><th style="width:40px">Диал.</th><th style="width:40px">Лизинг</th><th style="width:120px">Комментарий</th></tr></thead>
+          <thead><tr><th style="width:55px">Дата</th><th style="width:65px">Менеджер</th><th style="width:35px">Брон.</th><th style="width:40px">Объявл.</th><th style="width:40px">Клиенты</th><th style="width:120px">Комментарий</th></tr></thead>
           <tbody id="activity-body"></tbody>
         </table>
       </div>
     </div>
   </div>
 </div>
+
 
 </div>
 
@@ -457,16 +464,15 @@ function calcKpd(id, month) {
   const cnt = sales.length;
   const contacts = act.reduce((s,x) => s + Number(x.newc||0) + Number(x.rep||0), 0);
   const bookings = act.reduce((s,x) => s + Number(x.book||0), 0);
-  const leasing = act.reduce((s,x) => s + Number(x.lc||0), 0);
   const ads = act.reduce((s,x) => s + Number(x.ads||0) + Number(x.upd||0), 0);
+  const openDeals = db.sales.filter(s => s.mgr === id && (s.status === 'В работе' || s.status === 'Аванс получен')).length;
   const mgr = mgrById(id);
   const plan = mgr ? mgr.plan : 5000000;
 
   const actScore = Math.min(100, Math.round(
-    (Math.min(bookings,20)/20)*40 +
-    (Math.min(ads,30)/30)*25 +
-    (Math.min(contacts,60)/60)*25 +
-    (Math.min(leasing,10)/10)*10
+    (Math.min(bookings,20)/20)*50 +
+    (Math.min(ads,30)/30)*30 +
+    (Math.min(contacts,60)/60)*20
   ));
   const convBase = contacts > 0 ? Math.min(1, cnt / Math.max(contacts * 0.12, 1)) : 0;
   const convScore = Math.min(100, Math.round(convBase * 100));
@@ -477,7 +483,7 @@ function calcKpd(id, month) {
   ));
   const kpd = Math.round(actScore * 0.3 + convScore * 0.3 + finScore * 0.4);
   const bonus = allClosed.reduce((s,x) => s + Number(x.bonus||0), 0);
-  return {kpd, actScore, convScore, finScore, rev, margin, marginAV, bonus, cnt, cntAV, contacts, bookings, leasing, ads};
+  return {kpd, actScore, convScore, finScore, rev, margin, marginAV, bonus, cnt, cntAV, contacts, bookings, ads, openDeals};
 }
 
 function buildLogin() {
@@ -598,7 +604,7 @@ function buildMgr(id) {
   document.getElementById('daily-date-label').textContent = 'Сегодня, ' + new Date().toLocaleDateString('ru-RU', {day:'numeric', month:'long'});
   const prev = db.activity.find(a => a.mgr === id && a.date === today());
   if (prev) {
-    ['found','book','ads','upd','newc','rep','dial','lc','la','lap'].forEach(f => {
+    ['found','book','ads','upd','newc','rep'].forEach(f => {
       const el = document.getElementById('d-' + f);
       if (el) el.value = prev[f] || '';
     });
@@ -634,8 +640,6 @@ async function saveDay() {
     upd:   Number(document.getElementById('d-upd').value   || 0),
     newc:  Number(document.getElementById('d-newc').value  || 0),
     rep:   Number(document.getElementById('d-rep').value   || 0),
-    dial:  Number(document.getElementById('d-dial').value  || 0),
-    lc:    Number(document.getElementById('d-lc').value    || 0),
     comm:  document.getElementById('d-comm').value || ''
   };
   db.activity = db.activity.filter(a => !(a.mgr === id && a.date === today()));
@@ -649,7 +653,7 @@ async function saveDay() {
 }
 
 function clearDay() {
-  ['found','book','ads','upd','newc','rep','dial','lc','la','lap'].forEach(f => {
+  ['found','book','ads','upd','newc','rep'].forEach(f => {
     const el = document.getElementById('d-' + f);
     if (el) el.value = '';
   });
@@ -666,16 +670,12 @@ function renderDayHistory(id) {
     <th style="width:40px">Брон.</th>
     <th style="width:45px">Объявл.</th>
     <th style="width:50px">Клиенты</th>
-    <th style="width:45px">Диалоги</th>
-    <th style="width:45px">Лизинг</th>
   </tr></thead><tbody>` +
   recs.map(r => `<tr>
     <td>${fmtDate(r.date)}${r.date === today() ? ' <span class="badge bg">сег.</span>' : ''}</td>
     <td>${r.book||0}</td>
     <td>${(r.ads||0)+(r.upd||0)}</td>
     <td>${(r.newc||0)+(r.rep||0)}</td>
-    <td>${r.dial||0}</td>
-    <td>${r.lc||0}</td>
   </tr>`).join('') + '</tbody></table>';
 }
 
@@ -765,11 +765,10 @@ function renderStat(id) {
 
   const insights = [];
   if (k.cnt > 0 && k.contacts > 0 && convPct >= 10) insights.push({t:'g', text:'Хорошая конверсия — '+convPct+'% контактов становятся продажами'});
-  if (k.leasing >= 5) insights.push({t:'g', text:'Активная работа с лизингом — '+k.leasing+' контактов'});
   if (k.marginAV > 0) insights.push({t:'g', text:'Есть АВ-сделки — маржа ₽'+fmt(k.marginAV)});
   if (k.bookings > 0 && k.cnt === 0) insights.push({t:'a', text:'Есть бронирования ('+k.bookings+'), но нет закрытых сделок — довести до конца'});
   if (k.contacts > 0 && convPct < 5 && k.contacts > 10) insights.push({t:'a', text:'Низкая конверсия '+convPct+'% — разобрать качество диалогов'});
-  if (k.leasing < 2 && days > 3) insights.push({t:'a', text:'Мало контактов с лизинговыми менеджерами — '+k.leasing+' за месяц'});
+  if (k.openDeals > 3) insights.push({t:'a', text:'Много открытых сделок ('+k.openDeals+') — нужно довести до закрытия'});
   if (k.contacts < 10 && days > 5) insights.push({t:'r', text:'Очень мало контактов с клиентами — '+k.contacts+' за месяц'});
   if (!insights.length) insights.push({t:'b', text:'Заполняй данные каждый день — тогда появится полная картина'});
 
@@ -778,6 +777,7 @@ function renderStat(id) {
       <div class="sh">Финансовый результат за месяц</div>
       <div class="metrics" style="margin-bottom:${planMargin||planAV?'12px':'0'}">
         <div class="m"><div class="m-v">${k.cnt}</div><div class="m-l">Продаж закрыто</div></div>
+        <div class="m"><div class="m-v">${k.openDeals}</div><div class="m-l">Текущих сделок</div></div>
         <div class="m"><div class="m-v">₽${fmt(k.rev)}</div><div class="m-l">Оборот</div></div>
         <div class="m"><div class="m-v">₽${fmt(k.margin)}</div><div class="m-l">Маржа</div></div>
         <div class="m"><div class="m-v">${k.cntAV}</div><div class="m-l">АВ-сделок</div></div>
@@ -809,7 +809,6 @@ function renderStat(id) {
       <div class="metrics">
         <div class="m"><div class="m-v">${k.contacts}</div><div class="m-l">Контактов</div><div class="m-s">${contactsDay}/день</div></div>
         <div class="m"><div class="m-v">${k.bookings}</div><div class="m-l">Бронирований</div><div class="m-s">${bookDay}/день</div></div>
-        <div class="m"><div class="m-v">${k.leasing}</div><div class="m-l">Лизинг</div></div>
         <div class="m"><div class="m-v">${k.ads}</div><div class="m-l">Объявлений</div></div>
         <div class="m"><div class="m-v">${days}</div><div class="m-l">Дней внесено</div></div>
       </div>
@@ -1024,7 +1023,7 @@ function bossOpenMgr(id) {
       <div class="m"><div class="m-v">₽${fmt(k.marginAV)}</div><div class="m-l">АВ</div></div>
       ${k.bonus > 0 ? `<div class="m"><div class="m-v">₽${fmt(k.bonus)}</div><div class="m-l">Бонусы</div></div>` : ''}
       <div class="m"><div class="m-v">${k.contacts}</div><div class="m-l">Контактов</div></div>
-      <div class="m"><div class="m-v">${k.leasing}</div><div class="m-l">Лизинг</div></div>
+      <div class="m"><div class="m-v">${k.openDeals}</div><div class="m-l">Текущих сделок</div></div>
     </div>
     <div class="sl">Выполнение планов</div>
     ${(() => { const pm = Number(getMonthPlan(id, mo).margin||0); const pctM = pm > 0 ? Math.min(100,Math.round(k.margin/pm*100)) : null; const cM = pctM===null?'#ddd':pctM>=100?'#1a7a4a':pctM>=70?'#f0a500':'#c0392b'; return `<div class="kpb"><div class="kpl">Маржа от продаж</div><div class="kpbg"><div class="kpf" style="width:${pctM||0}%;background:${cM}"></div></div><div class="kpv">${pctM!==null?pctM+'%':'—'}</div></div>`; })()}
@@ -1105,21 +1104,41 @@ function renderAllSales() {
 
 function renderActivity() {
   const mgrF = document.getElementById('act-filter-mgr').value;
-  const m = currentMonth();
-  let acts = filterByMonth(db.activity, 'date', m);
+  const period = document.getElementById('act-period') ? document.getElementById('act-period').value : 'month';
+  const mo = currentMonth();
+  let acts = filterByMonth(db.activity, 'date', mo);
   if (mgrF) acts = acts.filter(a => a.mgr === mgrF);
+
+  // Сводка: за месяц или за сегодня
+  let summaryActs = acts;
+  if (period === 'today') summaryActs = acts.filter(a => a.date === today());
+  const sumFound  = summaryActs.reduce((s,a) => s + Number(a.found||0), 0);
+  const sumBook   = summaryActs.reduce((s,a) => s + Number(a.book||0), 0);
+  const sumAdsAll = summaryActs.reduce((s,a) => s + Number(a.ads||0), 0);
+  const sumAdsToday = summaryActs.reduce((s,a) => s + Number(a.upd||0), 0);
+  const sumNew    = summaryActs.reduce((s,a) => s + Number(a.newc||0), 0);
+  const sumRep    = summaryActs.reduce((s,a) => s + Number(a.rep||0), 0);
+  const periodLabel = period === 'today' ? 'за сегодня' : 'за месяц';
+
+  document.getElementById('activity-summary').innerHTML = `
+    <div class="m"><div class="m-v">${sumFound}</div><div class="m-l">Найдено техники</div><div class="m-s">${periodLabel}</div></div>
+    <div class="m"><div class="m-v">${sumBook}</div><div class="m-l">Забронировано</div></div>
+    <div class="m"><div class="m-v">${sumAdsToday}</div><div class="m-l">Выставлено объявл.</div></div>
+    <div class="m"><div class="m-v">${sumAdsAll}</div><div class="m-l">Объявлений всего</div></div>
+    <div class="m"><div class="m-v">${sumNew}</div><div class="m-l">Новых клиентов</div></div>
+    <div class="m"><div class="m-v">${sumRep}</div><div class="m-l">Повторных контактов</div></div>
+  `;
+
   const tb = document.getElementById('activity-body');
-  if (!acts.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Нет данных</td></tr>'; return; }
+  if (!acts.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Нет данных</td></tr>'; return; }
   tb.innerHTML = acts.slice(0, 50).map(a => {
-    const m = mgrById(a.mgr);
+    const mgr = mgrById(a.mgr);
     return `<tr>
       <td>${fmtDate(a.date)}${a.date === today() ? ' <span class="badge bg">сег.</span>' : ''}</td>
-      <td>${m ? m.name : a.mgr}</td>
+      <td>${mgr ? mgr.name : a.mgr}</td>
       <td>${a.book||0}</td>
       <td>${(a.ads||0)+(a.upd||0)}</td>
       <td>${(a.newc||0)+(a.rep||0)}</td>
-      <td>${a.dial||0}</td>
-      <td>${a.lc||0}</td>
       <td style="font-size:10px;color:#666">${(a.comm||'').slice(0,40)}</td>
     </tr>`;
   }).join('');
