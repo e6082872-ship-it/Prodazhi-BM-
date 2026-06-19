@@ -875,9 +875,11 @@ function renderBossMetrics() {
   const asMarg = asClosed.reduce((s,x) => s + Number(x.margin||0), 0);
   const bmCnt = bmClosed.length;
   const asCnt = asClosed.length;
+  const totalOpenDeals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен').length;
   document.getElementById('boss-metrics').innerHTML = `
     <div class="m"><div class="m-v">₽${fmt(totalRev)}</div><div class="m-l">Оборот</div></div>
-    <div class="m"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж</div></div>
+    <div class="m"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж закрыто</div></div>
+    <div class="m"><div class="m-v">${totalOpenDeals}</div><div class="m-l">Текущих сделок</div></div>
     <div class="m"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа (всего)</div><div class="m-s">${marginPct !== null ? 'план '+marginPct+'%' : ''}</div></div>
     <div class="m"><div class="m-v">₽${fmt(bmMarg)}</div><div class="m-l">Маржа БМ</div><div class="m-s">${bmCnt} прод.</div></div>
     <div class="m"><div class="m-v">₽${fmt(asMarg)}</div><div class="m-l">Маржа АС</div><div class="m-s">${asCnt} прод.</div></div>
@@ -889,7 +891,7 @@ function renderBossMetrics() {
 }
 
 function renderBossRanking() {
-  const sorted = MANAGERS.map(m => ({m, k: calcKpd(m.id)})).sort((a,b) => b.k.kpd - a.k.kpd);
+  const sorted = MANAGERS.map(m => ({m, k: calcKpd(m.id)})).sort((a,b) => b.k.margin - a.k.margin);
   const medals = ['🥇','🥈','🥉','4','5','6'];
   const el = document.getElementById('boss-ranking');
   el.innerHTML = sorted.map((x,i) => `
