@@ -128,6 +128,7 @@ tr:last-child td{border-bottom:none}
     <button class="nav-btn" onclick="mgrTab('my',this)"><i class="ti ti-chart-bar"></i> Итоги</button>
     <button class="nav-btn" onclick="mgrTab('sales',this)"><i class="ti ti-plus"></i> Сделка</button>
     <button class="nav-btn" onclick="mgrTab('stat',this)"><i class="ti ti-user"></i> Статистика</button>
+    <button class="nav-btn" onclick="mgrTab('clients',this)"><i class="ti ti-search"></i> Клиенты</button>
   </div>
 
   <div id="t-day" class="screen on">
@@ -206,6 +207,15 @@ tr:last-child td{border-bottom:none}
   <div id="t-stat" class="screen">
     <div id="stat-content"></div>
   </div>
+
+  <div id="t-clients" class="screen">
+    <div class="card">
+      <div class="sh">Поиск клиентов по технике</div>
+      <div style="font-size:11px;color:#888;margin-bottom:10px">Введите слово, например "самосвал" или "тягач" — появятся все ваши клиенты, которые её покупали или бронировали.</div>
+      <input type="text" id="my-client-search-tech" placeholder="Поиск по технике..." oninput="renderMyClientSearch()" style="width:100%;font-size:13px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px">
+      <div id="my-client-search-results"></div>
+    </div>
+  </div>
 </div>
 
 <div id="s-boss" class="screen">
@@ -223,6 +233,7 @@ tr:last-child td{border-bottom:none}
     <button class="nav-btn" onclick="bossTab('all-sales',this)"><i class="ti ti-list"></i> Продажи</button>
     <button class="nav-btn" onclick="bossTab('activity',this)"><i class="ti ti-activity"></i> Активность</button>
     <button class="nav-btn" onclick="bossTab('plans',this)"><i class="ti ti-target"></i> Планы</button>
+    <button class="nav-btn" onclick="bossTab('clients',this)"><i class="ti ti-search"></i> Клиенты</button>
   </div>
   <div class="month-bar">
     <label>📅 Период:</label>
@@ -295,6 +306,19 @@ tr:last-child td{border-bottom:none}
       <div class="metrics" id="activity-summary"></div>
     </div>
     <div class="card">
+      <div class="sh">Выставлено объявлений</div>
+      <div style="margin-bottom:10px">
+        <select id="ads-period" onchange="renderActivity()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff">
+          <option value="today">За сегодня</option>
+          <option value="week">За неделю</option>
+          <option value="month" selected>За месяц</option>
+          <option value="quarter">За квартал</option>
+          <option value="year">За год</option>
+        </select>
+      </div>
+      <div class="metrics" id="ads-summary"></div>
+    </div>
+    <div class="card">
       <div class="sh">Ежедневная активность команды</div>
       <div style="overflow-x:auto">
         <table>
@@ -302,6 +326,19 @@ tr:last-child td{border-bottom:none}
           <tbody id="activity-body"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+  <div id="b-clients" class="screen">
+    <div class="card">
+      <div class="sh">База клиентов</div>
+      <div style="font-size:11px;color:#888;margin-bottom:10px">Поиск по технике — введите слово, например "самосвал" или "тягач", и появятся все клиенты, которые её покупали или бронировали.</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <input type="text" id="client-search-tech" placeholder="Поиск по технике..." oninput="renderClientSearch()" style="flex:1;min-width:160px;font-size:13px;padding:8px 10px;border:1px solid #ddd;border-radius:8px">
+        <select id="client-search-mgr" onchange="renderClientSearch()" style="font-size:12px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Все менеджеры</option></select>
+        <select id="client-search-company" onchange="renderClientSearch()" style="font-size:12px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">БМ + АС</option><option>БМ</option><option>АС</option></select>
+      </div>
+      <div id="client-search-results"></div>
     </div>
   </div>
 </div>
@@ -618,7 +655,7 @@ function buildMgr(id) {
 }
 
 function mgrTab(t, btn) {
-  ['day','my','sales','stat'].forEach(x => {
+  ['day','my','sales','stat','clients'].forEach(x => {
     const el = document.getElementById('t-' + x);
     if (el) el.classList.remove('on');
   });
@@ -628,6 +665,7 @@ function mgrTab(t, btn) {
   if (btn) btn.classList.add('on');
   if (t === 'stat') renderStat(currentUser);
   if (t === 'my') { renderMyMetrics(currentUser); renderMySales(currentUser); }
+  if (t === 'clients') renderMyClientSearch();
 }
 
 async function saveDay() {
@@ -746,6 +784,52 @@ async function saveSale() {
   renderMyMetrics(id);
 }
 
+function renderMyClientSearch() {
+  const techQ = (document.getElementById('my-client-search-tech').value || '').trim().toLowerCase();
+  const resultsEl = document.getElementById('my-client-search-results');
+  let sales = db.sales.filter(s => s.mgr === currentUser && (s.client || s.tech));
+  if (techQ) sales = sales.filter(s => (s.tech||'').toLowerCase().includes(techQ));
+
+  if (!techQ) {
+    resultsEl.innerHTML = '<div class="empty">Введите название техники для поиска</div>';
+    return;
+  }
+  if (!sales.length) {
+    resultsEl.innerHTML = '<div class="empty">Клиентов не найдено</div>';
+    return;
+  }
+
+  sales.sort((a,b) => (b.ts||0) - (a.ts||0));
+
+  resultsEl.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:8px">Найдено: ${sales.length}</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th style="width:50px">Дата</th>
+        <th style="width:35px">Комп.</th>
+        <th style="width:100px">Клиент</th>
+        <th style="width:90px">Контакт</th>
+        <th style="width:100px">Техника</th>
+        <th style="width:60px">Сумма</th>
+        <th style="width:60px">Статус</th>
+      </tr></thead>
+      <tbody>` +
+      sales.map(s => {
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
+        const contact = [s.contactName, s.contactPhone].filter(Boolean).join(' · ');
+        return `<tr>
+          <td>${fmtDate(s.date)}</td>
+          <td>${cBadge}</td>
+          <td>${s.client||'—'}</td>
+          <td style="font-size:10px;color:#666">${contact||'—'}</td>
+          <td>${s.tech||''}</td>
+          <td>₽${fmt(s.sum||0)}</td>
+          <td><span class="badge ${sc}">${s.status||''}</span></td>
+        </tr>`;
+      }).join('') +
+    `</tbody></table></div>`;
+}
+
 function renderStat(id) {
   const mo = today().slice(0,7);
   const k = calcKpd(id, mo);
@@ -841,13 +925,14 @@ function buildBoss() {
 }
 
 function bossTab(t, btn) {
-  ['main','team','all-sales','activity','plans'].forEach(x => {
+  ['main','team','all-sales','activity','plans','clients'].forEach(x => {
     const el = document.getElementById('b-' + x); if (el) el.classList.remove('on');
   });
   document.querySelectorAll('#s-boss .nav-btn').forEach(b => b.classList.remove('on'));
   const el = document.getElementById('b-' + t); if (el) el.classList.add('on');
   if (btn) btn.classList.add('on');
   if (t === 'plans') renderPlansForm();
+  if (t === 'clients') renderClientSearch();
 }
 
 function renderBossMetrics() {
@@ -1116,7 +1201,6 @@ function renderActivity() {
   if (period === 'today') summaryActs = acts.filter(a => a.date === today());
   const sumFound  = summaryActs.reduce((s,a) => s + Number(a.found||0), 0);
   const sumBook   = summaryActs.reduce((s,a) => s + Number(a.book||0), 0);
-  const sumAdsAll = summaryActs.reduce((s,a) => s + Number(a.ads||0), 0);
   const sumAdsToday = summaryActs.reduce((s,a) => s + Number(a.upd||0), 0);
   const sumNew    = summaryActs.reduce((s,a) => s + Number(a.newc||0), 0);
   const sumRep    = summaryActs.reduce((s,a) => s + Number(a.rep||0), 0);
@@ -1126,9 +1210,46 @@ function renderActivity() {
     <div class="m"><div class="m-v">${sumFound}</div><div class="m-l">Найдено техники</div><div class="m-s">${periodLabel}</div></div>
     <div class="m"><div class="m-v">${sumBook}</div><div class="m-l">Забронировано</div></div>
     <div class="m"><div class="m-v">${sumAdsToday}</div><div class="m-l">Выставлено объявл.</div></div>
-    <div class="m"><div class="m-v">${sumAdsAll}</div><div class="m-l">Объявлений всего</div></div>
     <div class="m"><div class="m-v">${sumNew}</div><div class="m-l">Новых клиентов</div></div>
     <div class="m"><div class="m-v">${sumRep}</div><div class="m-l">Повторных контактов</div></div>
+  `;
+
+  // Блок "Выставлено объявлений" с гибким периодом (день/неделя/месяц/квартал/год)
+  const adsPeriod = document.getElementById('ads-period') ? document.getElementById('ads-period').value : 'month';
+  const now = new Date();
+  let fromDate;
+  if (adsPeriod === 'today') {
+    fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (adsPeriod === 'week') {
+    fromDate = new Date(now);
+    fromDate.setDate(now.getDate() - 6);
+  } else if (adsPeriod === 'month') {
+    fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (adsPeriod === 'quarter') {
+    fromDate = new Date(now);
+    fromDate.setMonth(now.getMonth() - 3);
+  } else if (adsPeriod === 'year') {
+    fromDate = new Date(now.getFullYear(), 0, 1);
+  }
+  const fromStr = fromDate.toISOString().slice(0,10);
+  const toStr = today();
+  let adsActs = db.activity.filter(a => a.date >= fromStr && a.date <= toStr);
+  if (mgrF) adsActs = adsActs.filter(a => a.mgr === mgrF);
+  const totalAdsPosted = adsActs.reduce((s,a) => s + Number(a.upd||0), 0);
+  const adsPeriodLabels = {today:'за сегодня', week:'за неделю', month:'за месяц', quarter:'за квартал', year:'за год'};
+
+  let adsByMgrHtml = '';
+  if (!mgrF) {
+    const byMgr = MANAGERS.map(m => {
+      const sum = adsActs.filter(a => a.mgr === m.id).reduce((s,a) => s + Number(a.upd||0), 0);
+      return {m, sum};
+    }).filter(x => x.sum > 0).sort((a,b) => b.sum - a.sum);
+    adsByMgrHtml = byMgr.map(x => `<div class="m"><div class="m-v">${x.sum}</div><div class="m-l">${x.m.name}</div></div>`).join('');
+  }
+
+  document.getElementById('ads-summary').innerHTML = `
+    <div class="m"><div class="m-v">${totalAdsPosted}</div><div class="m-l">Всего выставлено</div><div class="m-s">${adsPeriodLabels[adsPeriod]}</div></div>
+    ${adsByMgrHtml}
   `;
 
   const tb = document.getElementById('activity-body');
@@ -1144,6 +1265,64 @@ function renderActivity() {
       <td style="font-size:10px;color:#666">${(a.comm||'').slice(0,40)}</td>
     </tr>`;
   }).join('');
+}
+
+function renderClientSearch() {
+  const sel = document.getElementById('client-search-mgr');
+  if (sel && sel.options.length <= 1) {
+    MANAGERS.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.name; sel.appendChild(o); });
+  }
+  const techQ = (document.getElementById('client-search-tech').value || '').trim().toLowerCase();
+  const mgrF = document.getElementById('client-search-mgr').value;
+  const compF = document.getElementById('client-search-company').value;
+  const resultsEl = document.getElementById('client-search-results');
+
+  let sales = db.sales.filter(s => s.client || s.tech);
+  if (techQ) sales = sales.filter(s => (s.tech||'').toLowerCase().includes(techQ));
+  if (mgrF) sales = sales.filter(s => s.mgr === mgrF);
+  if (compF) sales = sales.filter(s => (s.company||'БМ') === compF);
+
+  if (!techQ) {
+    resultsEl.innerHTML = '<div class="empty">Введите название техники для поиска (например "самосвал")</div>';
+    return;
+  }
+  if (!sales.length) {
+    resultsEl.innerHTML = '<div class="empty">Клиентов не найдено</div>';
+    return;
+  }
+
+  sales.sort((a,b) => (b.ts||0) - (a.ts||0));
+
+  resultsEl.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:8px">Найдено: ${sales.length}</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th style="width:50px">Дата</th>
+        <th style="width:35px">Комп.</th>
+        <th style="width:65px">Менеджер</th>
+        <th style="width:100px">Клиент</th>
+        <th style="width:80px">Контакт</th>
+        <th style="width:90px">Техника</th>
+        <th style="width:60px">Сумма</th>
+        <th style="width:60px">Статус</th>
+      </tr></thead>
+      <tbody>` +
+      sales.map(s => {
+        const mgr = mgrById(s.mgr);
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
+        const contact = [s.contactName, s.contactPhone].filter(Boolean).join(' · ');
+        return `<tr>
+          <td>${fmtDate(s.date)}</td>
+          <td>${cBadge}</td>
+          <td>${mgr ? mgr.name : s.mgr}</td>
+          <td>${s.client||'—'}</td>
+          <td style="font-size:10px;color:#666">${contact||'—'}</td>
+          <td>${s.tech||''}</td>
+          <td>₽${fmt(s.sum||0)}</td>
+          <td><span class="badge ${sc}">${s.status||''}</span></td>
+        </tr>`;
+      }).join('') +
+    `</tbody></table></div>`;
 }
 
 function calcMarginAuto() {
