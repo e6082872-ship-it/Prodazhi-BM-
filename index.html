@@ -244,6 +244,10 @@ tr:last-child td{border-bottom:none}
   <div id="b-main" class="screen on">
     <div class="metrics" id="boss-metrics"></div>
     <div class="card">
+      <div class="sh">Объявлений на Авито сегодня</div>
+      <div id="boss-ads-today"></div>
+    </div>
+    <div class="card">
       <div class="sh">Рейтинг менеджеров</div>
       <div id="boss-ranking"></div>
     </div>
@@ -322,7 +326,7 @@ tr:last-child td{border-bottom:none}
       <div class="sh">Ежедневная активность команды</div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th style="width:55px">Дата</th><th style="width:65px">Менеджер</th><th style="width:35px">Брон.</th><th style="width:40px">Объявл.</th><th style="width:40px">Клиенты</th><th style="width:120px">Комментарий</th></tr></thead>
+          <thead><tr><th style="width:55px">Дата</th><th style="width:65px">Менеджер</th><th style="width:35px">Брон.</th><th style="width:50px">Всего объявл.</th><th style="width:50px">Выст. сегодня</th><th style="width:40px">Клиенты</th><th style="width:120px">Комментарий</th></tr></thead>
           <tbody id="activity-body"></tbody>
         </table>
       </div>
@@ -915,6 +919,7 @@ function renderStat(id) {
 function buildBoss() {
   buildMonthFilter();
   renderBossMetrics();
+  renderBossAdsToday();
   renderPlansForm();
   renderBossRanking();
   renderBossInsights();
@@ -973,6 +978,36 @@ function renderBossMetrics() {
     <div class="m"><div class="m-v">₽${fmt(bonusFirstHalf)}</div><div class="m-l">К выплате до 15</div></div>
     <div class="m"><div class="m-v">₽${fmt(bonusSecondHalf)}</div><div class="m-l">К выплате с 15</div></div>
   `;
+}
+
+function renderBossAdsToday() {
+  const el = document.getElementById('boss-ads-today');
+  if (!el) return;
+  const t = today();
+  // Для каждого менеджера берём последнюю запись активности (не обязательно сегодня)
+  // и показываем актуальное кол-во объявлений
+  const rows = MANAGERS.map(m => {
+    // Ищем запись за сегодня
+    const todayRec = db.activity.filter(a => a.mgr === m.id && a.date === t).slice(-1)[0];
+    // Если нет — берём последнюю вообще
+    const lastRec = db.activity.filter(a => a.mgr === m.id).sort((a,b) => (b.date||'').localeCompare(a.date||'')).slice(0)[0];
+    const rec = todayRec || lastRec;
+    const ads = rec ? Number(rec.ads||0) : null;
+    const isToday = rec && rec.date === t;
+    const dateLabel = rec ? (isToday ? 'сегодня' : fmtDate(rec.date)) : 'нет данных';
+    return {m, ads, isToday, dateLabel};
+  });
+
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">` +
+    rows.map(({m, ads, isToday, dateLabel}) => `
+      <div style="background:#f8f8f8;border-radius:10px;padding:10px 8px;text-align:center">
+        <div class="avatar ${m.cls}" style="width:28px;height:28px;font-size:10px;margin:0 auto 6px">${m.name[0]}</div>
+        <div style="font-weight:600;font-size:15px;color:${isToday?'#1a1a1a':'#999'}">${ads !== null ? ads : '—'}</div>
+        <div style="font-size:10px;color:#888;margin-top:2px">${m.name}</div>
+        <div style="font-size:9px;color:${isToday?'#1a7a4a':'#bbb'};margin-top:1px">${dateLabel}</div>
+      </div>`
+    ).join('') +
+  `</div>`;
 }
 
 function renderBossRanking() {
@@ -1209,47 +1244,53 @@ function renderActivity() {
   document.getElementById('activity-summary').innerHTML = `
     <div class="m"><div class="m-v">${sumFound}</div><div class="m-l">Найдено техники</div><div class="m-s">${periodLabel}</div></div>
     <div class="m"><div class="m-v">${sumBook}</div><div class="m-l">Забронировано</div></div>
-    <div class="m"><div class="m-v">${sumAdsToday}</div><div class="m-l">Выставлено объявл.</div></div>
     <div class="m"><div class="m-v">${sumNew}</div><div class="m-l">Новых клиентов</div></div>
     <div class="m"><div class="m-v">${sumRep}</div><div class="m-l">Повторных контактов</div></div>
   `;
 
   // Блок "Выставлено объявлений" с гибким периодом (день/неделя/месяц/квартал/год)
   const adsPeriod = document.getElementById('ads-period') ? document.getElementById('ads-period').value : 'month';
-  const now = new Date();
-  let fromDate;
+  const todayStr = today();
+  let adsFromStr;
   if (adsPeriod === 'today') {
-    fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    adsFromStr = todayStr;
   } else if (adsPeriod === 'week') {
-    fromDate = new Date(now);
-    fromDate.setDate(now.getDate() - 6);
+    const d = new Date(todayStr); d.setDate(d.getDate() - 6);
+    adsFromStr = d.toISOString().slice(0,10);
   } else if (adsPeriod === 'month') {
-    fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    adsFromStr = todayStr.slice(0,7) + '-01';
   } else if (adsPeriod === 'quarter') {
-    fromDate = new Date(now);
-    fromDate.setMonth(now.getMonth() - 3);
-  } else if (adsPeriod === 'year') {
-    fromDate = new Date(now.getFullYear(), 0, 1);
+    const d = new Date(todayStr); d.setMonth(d.getMonth() - 3);
+    adsFromStr = d.toISOString().slice(0,10);
+  } else {
+    adsFromStr = todayStr.slice(0,4) + '-01-01';
   }
-  const fromStr = fromDate.toISOString().slice(0,10);
-  const toStr = today();
-  let adsActs = db.activity.filter(a => a.date >= fromStr && a.date <= toStr);
+  let adsActs = db.activity.filter(a => a.date >= adsFromStr && a.date <= todayStr);
   if (mgrF) adsActs = adsActs.filter(a => a.mgr === mgrF);
-  const totalAdsPosted = adsActs.reduce((s,a) => s + Number(a.upd||0), 0);
+  const totalAdsAll = adsActs.reduce((s,a) => s + Number(a.ads||0), 0);
+  const totalAdsNew = adsActs.reduce((s,a) => s + Number(a.upd||0), 0);
   const adsPeriodLabels = {today:'за сегодня', week:'за неделю', month:'за месяц', quarter:'за квартал', year:'за год'};
 
   let adsByMgrHtml = '';
   if (!mgrF) {
     const byMgr = MANAGERS.map(m => {
-      const sum = adsActs.filter(a => a.mgr === m.id).reduce((s,a) => s + Number(a.upd||0), 0);
-      return {m, sum};
-    }).filter(x => x.sum > 0).sort((a,b) => b.sum - a.sum);
-    adsByMgrHtml = byMgr.map(x => `<div class="m"><div class="m-v">${x.sum}</div><div class="m-l">${x.m.name}</div></div>`).join('');
+      const mActs = adsActs.filter(a => a.mgr === m.id);
+      const adsAll = mActs.reduce((s,a) => s + Number(a.ads||0), 0);
+      const adsNew = mActs.reduce((s,a) => s + Number(a.upd||0), 0);
+      return {m, adsAll, adsNew};
+    }).filter(x => x.adsAll > 0 || x.adsNew > 0).sort((a,b) => b.adsNew - a.adsNew);
+    adsByMgrHtml = byMgr.map(x => `
+      <div class="m">
+        <div class="m-v">${x.adsNew}</div>
+        <div class="m-l">${x.m.name}</div>
+        <div class="m-s">всего: ${x.adsAll}</div>
+      </div>`).join('');
   }
 
   document.getElementById('ads-summary').innerHTML = `
-    <div class="m"><div class="m-v">${totalAdsPosted}</div><div class="m-l">Всего выставлено</div><div class="m-s">${adsPeriodLabels[adsPeriod]}</div></div>
-    ${adsByMgrHtml}
+    <div class="m"><div class="m-v">${totalAdsNew}</div><div class="m-l">Выставлено сегодня</div><div class="m-s">${adsPeriodLabels[adsPeriod]}</div></div>
+    <div class="m"><div class="m-v">${totalAdsAll}</div><div class="m-l">Всего на Авито</div><div class="m-s">${adsPeriodLabels[adsPeriod]}</div></div>
+    ${adsByMgrHtml || '<div style="font-size:12px;color:#999;padding:8px">Нет данных за выбранный период</div>'}
   `;
 
   const tb = document.getElementById('activity-body');
@@ -1260,7 +1301,8 @@ function renderActivity() {
       <td>${fmtDate(a.date)}${a.date === today() ? ' <span class="badge bg">сег.</span>' : ''}</td>
       <td>${mgr ? mgr.name : a.mgr}</td>
       <td>${a.book||0}</td>
-      <td>${(a.ads||0)+(a.upd||0)}</td>
+      <td>${a.ads||0}</td>
+      <td>${a.upd||0}</td>
       <td>${(a.newc||0)+(a.rep||0)}</td>
       <td style="font-size:10px;color:#666">${(a.comm||'').slice(0,40)}</td>
     </tr>`;
@@ -1534,6 +1576,7 @@ async function init() {
     await loadDB();
     if (currentUser === 'boss') {
       renderBossMetrics();
+      renderBossAdsToday();
       renderBossRanking();
       renderBossInsights();
       renderAllSales();
