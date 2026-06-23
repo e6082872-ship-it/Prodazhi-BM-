@@ -1393,8 +1393,13 @@ function openEditModal(idx) {
   document.getElementById('e-bonus').value = s.bonus || 0;
   document.getElementById('e-bonus-comm').value = s.bonusComm || '';
   document.getElementById('e-comm').value = s.comm || '';
-  calcMarginAutoEdit();
-  toggleAVFieldsEdit();
+  // Не пересчитываем маржу автоматом при открытии — загружаем сохранённое значение
+  // Пересчёт произойдёт только если пользователь сам изменит сумму/покупку/расходы
+  const isAV = (s.type || 'Наличные') === 'АВ';
+  const pw = document.getElementById('e-purchase-wrap');
+  const ew = document.getElementById('e-expense-wrap');
+  if (pw) pw.style.display = isAV ? 'none' : '';
+  if (ew) ew.style.display = isAV ? 'none' : '';
   document.getElementById('edit-modal').classList.add('on');
 }
 
