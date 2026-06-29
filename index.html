@@ -956,8 +956,8 @@ function renderBossMetrics() {
   const contacts = filterByMonth(db.activity, 'date', m).reduce((s,a) => s + Number(a.newc||0) + Number(a.rep||0), 0);
   const leasing  = filterByMonth(db.activity, 'date', m).reduce((s,a) => s + Number(a.lc||0), 0);
   const allClosedForBonus = filterByMonth(db.sales.filter(s => s.status === 'Закрыта'), 'date', m);
-  const bonusFirstHalf = allClosedForBonus.filter(s => { const day = parseInt((s.date||'').split('-')[2]||'0',10); return day >= 1 && day <= 15; }).reduce((s,x) => s + Number(x.bonus||0), 0);
-  const bonusSecondHalf = allClosedForBonus.filter(s => { const day = parseInt((s.date||'').split('-')[2]||'0',10); return day > 15; }).reduce((s,x) => s + Number(x.bonus||0), 0);
+  const bonusFirstHalf = allClosedForBonus.filter(s => { const d = s.shipDate || s.date || ''; const day = parseInt(d.split('-')[2]||'0',10); return day >= 1 && day <= 15; }).reduce((s,x) => s + Number(x.bonus||0), 0);
+  const bonusSecondHalf = allClosedForBonus.filter(s => { const d = s.shipDate || s.date || ''; const day = parseInt(d.split('-')[2]||'0',10); return day > 15; }).reduce((s,x) => s + Number(x.bonus||0), 0);
   const totalBonus = bonusFirstHalf + bonusSecondHalf;
   const bmClosed = filterByMonth(db.sales.filter(s => s.status === 'Закрыта' && (s.company||'БМ') === 'БМ' && s.type !== 'АВ'), 'date', m);
   const asClosed = filterByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.company === 'АС' && s.type !== 'АВ'), 'date', m);
