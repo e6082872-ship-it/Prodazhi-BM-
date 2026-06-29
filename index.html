@@ -268,7 +268,15 @@ tr:last-child td{border-bottom:none}
       <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
         <select id="filter-company" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">БМ + АС</option><option>БМ</option><option>АС</option></select>
         <select id="filter-mgr" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Все менеджеры</option></select>
-        <select id="filter-type" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Любой тип</option><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select>
+        <div style="position:relative;display:inline-block" id="type-filter-wrap">
+          <button onclick="toggleTypeFilter(event)" id="type-filter-btn" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:4px"><span id="type-filter-label">Любой тип</span> <span style="font-size:9px">▾</span></button>
+          <div id="type-filter-dropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);padding:6px;min-width:140px;margin-top:2px">
+            <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;font-size:12px;border-radius:6px"><input type="checkbox" value="Наличные" onchange="renderAllSales()" class="type-filter-cb"> Наличные</label>
+            <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;font-size:12px;border-radius:6px"><input type="checkbox" value="Безнал" onchange="renderAllSales()" class="type-filter-cb"> Безнал</label>
+            <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;font-size:12px;border-radius:6px"><input type="checkbox" value="Лизинг" onchange="renderAllSales()" class="type-filter-cb"> Лизинг</label>
+            <label style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;font-size:12px;border-radius:6px"><input type="checkbox" value="АВ" onchange="renderAllSales()" class="type-filter-cb"> АВ</label>
+          </div>
+        </div>
         <select id="filter-status" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Любой статус</option><option>Закрыта</option><option>В работе</option><option>Аванс получен</option><option>Отменена</option></select>
       </div>
       <div style="overflow-x:auto">
@@ -815,9 +823,11 @@ function renderMyClientSearch() {
         <th style="width:100px">Техника</th>
         <th style="width:60px">Сумма</th>
         <th style="width:60px">Статус</th>
+        <th style="width:30px"></th>
       </tr></thead>
       <tbody>` +
       sales.map(s => {
+        const idx = db.sales.indexOf(s);
         const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
         const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
         const contact = [s.contactName, s.contactPhone].filter(Boolean).join(' · ');
@@ -829,6 +839,7 @@ function renderMyClientSearch() {
           <td>${s.tech||''}</td>
           <td>₽${fmt(s.sum||0)}</td>
           <td><span class="badge ${sc}">${s.status||''}</span></td>
+          <td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td>
         </tr>`;
       }).join('') +
     `</tbody></table></div>`;
@@ -1177,16 +1188,37 @@ function buildFilterDropdowns() {
   document.getElementById('act-filter-mgr').innerHTML = '<option value="">Все менеджеры</option>' + opts;
 }
 
+function toggleTypeFilter(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('type-filter-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('type-filter-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const dd = document.getElementById('type-filter-dropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
+function updateTypeLabel() {
+  const checked = Array.from(document.querySelectorAll('.type-filter-cb:checked')).map(cb => cb.value);
+  const label = document.getElementById('type-filter-label');
+  if (label) label.textContent = checked.length === 0 ? 'Любой тип' : checked.join(', ');
+}
+
 function renderAllSales() {
   const compF   = document.getElementById('filter-company').value;
   const mgrF    = document.getElementById('filter-mgr').value;
-  const typeF   = document.getElementById('filter-type').value;
+  updateTypeLabel();
+  const typeCBs = Array.from(document.querySelectorAll('.type-filter-cb:checked')).map(cb => cb.value);
   const statF   = document.getElementById('filter-status').value;
   const m = currentMonth();
   let sales = filterByMonth(db.sales, 'date', m);
   if (compF) sales = sales.filter(s => (s.company||'БМ') === compF);
   if (mgrF)  sales = sales.filter(s => s.mgr === mgrF);
-  if (typeF) sales = sales.filter(s => s.type === typeF);
+  if (typeCBs.length) sales = sales.filter(s => typeCBs.includes(s.type));
   if (statF) sales = sales.filter(s => s.status === statF);
   const tb  = document.getElementById('all-sales-body');
   const tot = document.getElementById('all-sales-total');
@@ -1346,9 +1378,11 @@ function renderClientSearch() {
         <th style="width:90px">Техника</th>
         <th style="width:60px">Сумма</th>
         <th style="width:60px">Статус</th>
+        <th style="width:30px"></th>
       </tr></thead>
       <tbody>` +
       sales.map(s => {
+        const idx = db.sales.indexOf(s);
         const mgr = mgrById(s.mgr);
         const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
         const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
@@ -1362,6 +1396,7 @@ function renderClientSearch() {
           <td>${s.tech||''}</td>
           <td>₽${fmt(s.sum||0)}</td>
           <td><span class="badge ${sc}">${s.status||''}</span></td>
+          <td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td>
         </tr>`;
       }).join('') +
     `</tbody></table></div>`;
