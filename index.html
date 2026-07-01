@@ -496,8 +496,16 @@ function updateMonthBadge(month) {
 }
 
 function onMonthChange() {
-  updateMonthBadge(currentMonth());
-  buildBoss();
+  const m = currentMonth();
+  updateMonthBadge(m);
+  renderBossMetrics();
+  renderBossAdsToday();
+  renderBossRanking();
+  renderBossInsights();
+  buildTeamGrid();
+  renderAllSales();
+  renderActivity();
+  renderPlansProgress();
 }
 
 function calcKpd(id, month) {
