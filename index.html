@@ -358,6 +358,17 @@ tr:last-child td{border-bottom:none}
 
 </div>
 
+<!-- Open Deals Modal -->
+<div class="modal-overlay" id="open-deals-modal" onclick="if(event.target===this)closeOpenDeals()">
+  <div class="modal-box" style="max-width:720px;max-height:80vh;overflow-y:auto;background:#fff;border-radius:16px;padding:20px">
+    <div class="modal-title">
+      <span>Текущие сделки</span>
+      <button class="modal-close" onclick="closeOpenDeals()">×</button>
+    </div>
+    <div id="open-deals-content"></div>
+  </div>
+</div>
+
 <!-- Edit Sale Modal -->
 <div class="modal-overlay" id="edit-modal">
   <div class="modal">
@@ -988,7 +999,7 @@ function renderBossMetrics() {
   document.getElementById('boss-metrics').innerHTML = `
     <div class="m"><div class="m-v">₽${fmt(totalRev)}</div><div class="m-l">Оборот</div></div>
     <div class="m"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж закрыто</div></div>
-    <div class="m"><div class="m-v">${totalOpenDeals}</div><div class="m-l">Текущих сделок</div></div>
+    <div class="m" onclick="showOpenDeals()" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">${totalOpenDeals}</div><div class="m-l">Текущих сделок</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     <div class="m"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа (всего)</div><div class="m-s">${marginPct !== null ? 'план '+marginPct+'%' : ''}</div></div>
     <div class="m"><div class="m-v">₽${fmt(bmMarg)}</div><div class="m-l">Маржа БМ</div><div class="m-s">${bmCnt} прод.</div></div>
     <div class="m"><div class="m-v">₽${fmt(asMarg)}</div><div class="m-l">Маржа АС</div><div class="m-s">${asCnt} прод.</div></div>
@@ -1457,6 +1468,53 @@ function toggleAVFieldsEdit() {
 }
 
 let editIdx = -1;
+
+function showOpenDeals() {
+  const deals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен');
+  deals.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  const el = document.getElementById('open-deals-content');
+  if (!deals.length) {
+    el.innerHTML = '<div class="empty">Текущих сделок нет</div>';
+  } else {
+    el.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:10px">Всего: ${deals.length} сделок</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th style="width:50px">Дата</th>
+        <th style="width:35px">Комп.</th>
+        <th style="width:65px">Менеджер</th>
+        <th style="width:90px">Клиент</th>
+        <th style="width:90px">Техника</th>
+        <th style="width:65px">Сумма</th>
+        <th style="width:65px">Маржа</th>
+        <th style="width:70px">Статус</th>
+        <th style="width:30px"></th>
+      </tr></thead>
+      <tbody>` +
+      deals.map(s => {
+        const idx = db.sales.indexOf(s);
+        const mgr = mgrById(s.mgr);
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        const sc = s.status === 'Аванс получен' ? 'ba' : 'bb';
+        return `<tr>
+          <td>${fmtDate(s.date)}</td>
+          <td>${cBadge}</td>
+          <td>${mgr ? mgr.name : s.mgr}</td>
+          <td>${s.client||'—'}</td>
+          <td>${s.tech||'—'}</td>
+          <td>₽${fmt(s.sum||0)}</td>
+          <td>₽${fmt(s.margin||0)}</td>
+          <td><span class="badge ${sc}">${s.status}</span></td>
+          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+        </tr>`;
+      }).join('') +
+    '</tbody></table></div>';
+  }
+  document.getElementById('open-deals-modal').classList.add('on');
+}
+
+function closeOpenDeals() {
+  document.getElementById('open-deals-modal').classList.remove('on');
+}
 
 function openEditModal(idx) {
   const s = db.sales[idx];
