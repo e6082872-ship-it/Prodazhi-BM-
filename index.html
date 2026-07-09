@@ -473,9 +473,17 @@ function currentMonth() {
   const el = document.getElementById('month-filter');
   return el ? el.value : today().slice(0,7);
 }
+// Эффективная дата продажи: дата отгрузки если есть, иначе дата сделки
+function saleDate(s) { return s.shipDate || s.date || ''; }
+
 function filterByMonth(arr, field, month) {
   if (!month || month === 'all') return arr;
   return arr.filter(x => (x[field]||'').startsWith(month));
+}
+// Фильтр продаж по месяцу — всегда по дате отгрузки (или дате сделки если нет отгрузки)
+function filterSalesByMonth(sales, month) {
+  if (!month || month === 'all') return sales;
+  return sales.filter(s => saleDate(s).startsWith(month));
 }
 
 function buildMonthFilter() {
@@ -484,7 +492,7 @@ function buildMonthFilter() {
   const months = new Set();
   const now = today().slice(0,7);
   months.add(now);
-  db.sales.forEach(s => { if (s.date) months.add(s.date.slice(0,7)); });
+  db.sales.forEach(s => { const d = saleDate(s); if (d) months.add(d.slice(0,7)); });
   db.activity.forEach(a => { if (a.date) months.add(a.date.slice(0,7)); });
   const sorted = [...months].sort().reverse();
   const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -521,7 +529,7 @@ function onMonthChange() {
 
 function calcKpd(id, month) {
   const m = month || currentMonth();
-  const allClosed = filterByMonth(db.sales.filter(s => s.mgr === id && s.status === 'Закрыта'), 'date', m);
+  const allClosed = filterSalesByMonth(db.sales.filter(s => s.mgr === id && s.status === 'Закрыта'), m);
   const sales = allClosed.filter(s => s.type !== 'АВ');
   const salesAV = allClosed.filter(s => s.type === 'АВ');
   const act = filterByMonth(db.activity.filter(a => a.mgr === id), 'date', m);
@@ -776,18 +784,22 @@ function renderMySales(id) {
     const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : s.type === 'АВ' ? 'ba' : '';
     const bonusCell = s.status === 'Закрыта' && s.bonus > 0 ? `<span class="badge bg">+₽${fmt(s.bonus)}${s.bonusComm?' · '+s.bonusComm:''}</span>` : '';
     const compBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
-    return `<tr><td>${fmtDate(s.date)}</td><td>${s.shipDate?fmtDate(s.shipDate):'—'}</td><td>${compBadge}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td>₽${fmt(s.margin||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td>${bonusCell}</td><td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td></tr>`;
+    return `<tr><td>${fmtDate(s.date)}</td><td>${s.shipDate ? fmtDate(s.shipDate) : (s.status==='Закрыта' ? '<span style="color:#c0392b;font-weight:500" title="Укажите дату отгрузки!">⚠️</span>' : '—')}</td><td>${compBadge}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td>₽${fmt(s.margin||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td>${bonusCell}</td><td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td></tr>`;
   }).join('');
 }
 
 async function saveSale() {
   const id = currentUser;
   const sStatus = document.getElementById('s-status').value;
+  const sShipDate = document.getElementById('s-ship-date').value || '';
+  if (sStatus === 'Закрыта' && !sShipDate) {
+    if (!confirm('⚠️ Сделка закрыта, но дата отгрузки не указана!\nБез даты отгрузки сделка не попадёт в отчёты нужного месяца.\n\nВсё равно сохранить?')) return;
+  }
   const rec = {
     mgr: id,
     company: document.getElementById('s-company').value,
     date: document.getElementById('s-date').value,
-    shipDate: document.getElementById('s-ship-date').value || '',
+    shipDate: sShipDate,
     client: document.getElementById('s-client').value,
     contactName: document.getElementById('s-contact-name').value || '',
     contactPhone: document.getElementById('s-contact-phone').value || '',
@@ -972,7 +984,7 @@ function bossTab(t, btn) {
 
 function renderBossMetrics() {
   const m = currentMonth();
-  const closed = filterByMonth(db.sales.filter(s => s.status === 'Закрыта'), 'date', m);
+  const closed = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта'), m);
   const closedSales = closed.filter(x => x.type !== 'АВ');
   const closedAV = closed.filter(x => x.type === 'АВ');
   const totalRev  = closedSales.reduce((s,x) => s + Number(x.sum||0), 0);
@@ -985,21 +997,23 @@ function renderBossMetrics() {
   const pct = totalPlan > 0 ? Math.round(totalRev / totalPlan * 100) : 0;
   const contacts = filterByMonth(db.activity, 'date', m).reduce((s,a) => s + Number(a.newc||0) + Number(a.rep||0), 0);
   const leasing  = filterByMonth(db.activity, 'date', m).reduce((s,a) => s + Number(a.lc||0), 0);
-  const allClosedForBonus = filterByMonth(db.sales.filter(s => s.status === 'Закрыта'), 'date', m);
+  const allClosedForBonus = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта'), m);
   const bonusFirstHalf = allClosedForBonus.filter(s => { const d = s.shipDate || s.date || ''; const day = parseInt(d.split('-')[2]||'0',10); return day >= 1 && day <= 15; }).reduce((s,x) => s + Number(x.bonus||0), 0);
   const bonusSecondHalf = allClosedForBonus.filter(s => { const d = s.shipDate || s.date || ''; const day = parseInt(d.split('-')[2]||'0',10); return day > 15; }).reduce((s,x) => s + Number(x.bonus||0), 0);
   const totalBonus = bonusFirstHalf + bonusSecondHalf;
-  const bmClosed = filterByMonth(db.sales.filter(s => s.status === 'Закрыта' && (s.company||'БМ') === 'БМ' && s.type !== 'АВ'), 'date', m);
-  const asClosed = filterByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.company === 'АС' && s.type !== 'АВ'), 'date', m);
+  const bmClosed = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && (s.company||'БМ') === 'БМ' && s.type !== 'АВ'), m);
+  const asClosed = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.company === 'АС' && s.type !== 'АВ'), m);
   const bmMarg = bmClosed.reduce((s,x) => s + Number(x.margin||0), 0);
   const asMarg = asClosed.reduce((s,x) => s + Number(x.margin||0), 0);
   const bmCnt = bmClosed.length;
   const asCnt = asClosed.length;
   const totalOpenDeals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен').length;
+  const noShipDate = db.sales.filter(s => s.status === 'Закрыта' && !s.shipDate);
   document.getElementById('boss-metrics').innerHTML = `
     <div class="m"><div class="m-v">₽${fmt(totalRev)}</div><div class="m-l">Оборот</div></div>
     <div class="m"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж закрыто</div></div>
     <div class="m" onclick="showOpenDeals()" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">${totalOpenDeals}</div><div class="m-l">Текущих сделок</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
+    ${noShipDate.length > 0 ? `<div class="m" onclick="showNoShipDate()" style="cursor:pointer;border:2px solid #e74c3c;border-radius:10px;background:#fdeaea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#c0392b">${noShipDate.length}</div><div class="m-l" style="color:#c0392b">⚠️ Без отгрузки</div><div class="m-s" style="color:#c0392b">закрытые сделки</div></div>` : ''}
     <div class="m"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа (всего)</div><div class="m-s">${marginPct !== null ? 'план '+marginPct+'%' : ''}</div></div>
     <div class="m"><div class="m-v">₽${fmt(bmMarg)}</div><div class="m-l">Маржа БМ</div><div class="m-s">${bmCnt} прод.</div></div>
     <div class="m"><div class="m-v">₽${fmt(asMarg)}</div><div class="m-l">Маржа АС</div><div class="m-s">${asCnt} прод.</div></div>
@@ -1156,7 +1170,7 @@ function bossOpenMgr(id) {
   const actDay = Math.round((k.contacts + k.bookings) / days);
   const ctcSale = k.cnt > 0 && k.contacts > 0 ? Math.round(k.contacts / k.cnt) : '—';
   const bkSale  = k.cnt > 0 && k.bookings > 0 ? Math.round(k.bookings / k.cnt) : '—';
-  const recentSales = filterByMonth(db.sales.filter(s => s.mgr === id), 'date', mo).slice(0,4);
+  const recentSales = filterSalesByMonth(db.sales.filter(s => s.mgr === id), mo).slice(0,4);
   const recentAct = mAct.slice(0,3);
   const det = document.getElementById('team-detail');
   det.style.display = 'block';
@@ -1234,7 +1248,7 @@ function renderAllSales() {
   const typeCBs = Array.from(document.querySelectorAll('.type-filter-cb:checked')).map(cb => cb.value);
   const statF   = document.getElementById('filter-status').value;
   const m = currentMonth();
-  let sales = filterByMonth(db.sales, 'date', m);
+  let sales = filterSalesByMonth(db.sales, m);
   if (compF) sales = sales.filter(s => (s.company||'БМ') === compF);
   if (mgrF)  sales = sales.filter(s => s.mgr === mgrF);
   if (typeCBs.length) sales = sales.filter(s => typeCBs.includes(s.type));
@@ -1252,7 +1266,7 @@ function renderAllSales() {
     const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
     return `<tr>
       <td>${fmtDate(s.date)}</td>
-      <td>${s.shipDate?fmtDate(s.shipDate):'—'}</td>
+      <td>${s.shipDate ? fmtDate(s.shipDate) : (s.status==='Закрыта' ? '<span style="color:#c0392b;font-weight:500" title="Дата отгрузки не указана!">⚠️</span>' : '—')}</td>
       <td>${cBadge}</td>
       <td><span style="font-weight:500">${mgr?mgr.name:s.mgr}</span></td>
       <td>${s.client||''}</td>
@@ -1469,7 +1483,44 @@ function toggleAVFieldsEdit() {
 
 let editIdx = -1;
 
+function showNoShipDate() {
+  const deals = db.sales.filter(s => s.status === 'Закрыта' && !s.shipDate);
+  const el = document.getElementById('open-deals-content');
+  document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = '⚠️ Закрытые сделки без даты отгрузки';
+  if (!deals.length) {
+    el.innerHTML = '<div class="empty">Все закрытые сделки имеют дату отгрузки ✅</div>';
+  } else {
+    el.innerHTML = `<div style="font-size:12px;color:#c0392b;margin-bottom:10px;padding:8px;background:#fdeaea;border-radius:8px">⚠️ Эти сделки не попадают в отчёты — укажите дату отгрузки!</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th style="width:50px">Дата</th>
+        <th style="width:35px">Комп.</th>
+        <th style="width:65px">Менеджер</th>
+        <th style="width:90px">Клиент</th>
+        <th style="width:90px">Техника</th>
+        <th style="width:65px">Маржа</th>
+        <th style="width:30px"></th>
+      </tr></thead><tbody>` +
+    deals.map(s => {
+      const idx = db.sales.indexOf(s);
+      const mgr = mgrById(s.mgr);
+      const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+      return `<tr style="background:#fff9f9">
+        <td>${fmtDate(s.date)}</td>
+        <td>${cBadge}</td>
+        <td>${mgr ? mgr.name : s.mgr}</td>
+        <td>${s.client||'—'}</td>
+        <td>${s.tech||'—'}</td>
+        <td>₽${fmt(s.margin||0)}</td>
+        <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+      </tr>`;
+    }).join('') + '</tbody></table></div>';
+  }
+  document.getElementById('open-deals-modal').classList.add('on');
+}
+
 function showOpenDeals() {
+  document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'Текущие сделки';
   const deals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен');
   deals.sort((a,b) => (b.date||'').localeCompare(a.date||''));
   const el = document.getElementById('open-deals-content');
