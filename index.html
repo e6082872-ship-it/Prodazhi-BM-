@@ -599,13 +599,20 @@ function buildLogin() {
     </div>`; })()}
   </div>`;
 
-  MANAGERS.forEach(m => {
-    const k = calcKpd(m.id, today().slice(0,7));
-    const plan = getMonthPlan(m.id, today().slice(0,7));
+  const mo = today().slice(0,7);
+  const sortedMgrs = [...MANAGERS].sort((a, b) => {
+    const ka = calcKpd(a.id, mo); const kb = calcKpd(b.id, mo);
+    return (kb.margin + (kb.marginAV||0)) - (ka.margin + (ka.marginAV||0));
+  });
+
+  sortedMgrs.forEach((m, idx) => {
+    const k = calcKpd(m.id, mo);
+    const plan = getMonthPlan(m.id, mo);
     const planMargin = Number(plan.margin||0);
     const pct = planMargin > 0 ? Math.min(100, Math.round(k.margin / planMargin * 100)) : null;
     const barColor = pct === null ? '#ddd' : pct >= 100 ? '#1a7a4a' : pct >= 70 ? '#f0a500' : '#c0392b';
     el.innerHTML += `<div class="mgr-card" onclick="login('${m.id}')">
+      <div style="font-size:11px;font-weight:600;color:#999;width:16px;flex-shrink:0;text-align:center">${idx+1}</div>
       <div class="avatar ${m.cls}" style="width:40px;height:40px;font-size:14px">${m.name[0]}</div>
       <div class="mgr-info">
         <div class="mgr-name">${m.name}</div>
@@ -1055,7 +1062,7 @@ function renderBossAdsToday() {
 }
 
 function renderBossRanking() {
-  const sorted = MANAGERS.map(m => ({m, k: calcKpd(m.id)})).sort((a,b) => b.k.margin - a.k.margin);
+  const sorted = MANAGERS.map(m => ({m, k: calcKpd(m.id)})).sort((a,b) => (b.k.margin + (b.k.marginAV||0)) - (a.k.margin + (a.k.marginAV||0)));
   const medals = ['🥇','🥈','🥉','4','5','6'];
   const el = document.getElementById('boss-ranking');
   el.innerHTML = sorted.map((x,i) => `
@@ -1064,7 +1071,7 @@ function renderBossRanking() {
       <div class="avatar ${x.m.cls}" style="width:28px;height:28px;font-size:10px">${x.m.name[0]}</div>
       <div class="ri">
         <div class="rn">${x.m.name}</div>
-        <div class="rs">${x.k.cnt} прод. · ₽${fmt(x.k.rev)} · марж. ₽${fmt(x.k.margin)}</div>
+        <div class="rs">${x.k.cnt} прод. · ₽${fmt(x.k.rev)} · марж. ₽${fmt(x.k.margin)}${x.k.marginAV > 0 ? ' · АВ ₽'+fmt(x.k.marginAV) : ''}</div>
       </div>
       <div class="bar-wrap">
         <div class="bar-bg"><div class="bar-f" style="width:${(() => { const p = getMonthPlan(x.m.id, currentMonth()); const pm = Number(p.margin||0); return pm > 0 ? Math.min(100,Math.round(x.k.margin/pm*100)) : 0; })()}%;background:${x.m.color}"></div></div>
@@ -1081,7 +1088,7 @@ function renderBossInsights() {
     el.innerHTML = '<div class="ins b"><i class="ti ti-info-circle"></i><span>Менеджеры ещё не заполнили данные.</span></div>';
     return;
   }
-  const sorted = MANAGERS.map(m => { const k = calcKpd(m.id, mo); const plan = getMonthPlan(m.id, mo); return {m, k, plan}; }).sort((a,b) => b.k.margin - a.k.margin);
+  const sorted = MANAGERS.map(m => { const k = calcKpd(m.id, mo); const plan = getMonthPlan(m.id, mo); return {m, k, plan}; }).sort((a,b) => (b.k.margin + (b.k.marginAV||0)) - (a.k.margin + (a.k.marginAV||0)));
   let html = '';
   sorted.forEach(({m, k, plan}) => {
     const pm = Number(plan.margin||0);
