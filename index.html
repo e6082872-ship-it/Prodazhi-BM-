@@ -780,19 +780,32 @@ function renderMyMetrics(id) {
 }
 
 function renderMySales(id) {
-  const sales = db.sales.filter(s => s.mgr === id).slice(0, 30);
+  const sales = db.sales.filter(s => s.mgr === id);
+  // Сортировка: сначала по эффективной дате (shipDate || date) по убыванию
+  sales.sort((a, b) => (saleDate(b)||'').localeCompare(saleDate(a)||''));
   const tb = document.getElementById('my-sales-body');
   if (!tb) return;
-  if (!sales.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Продаж пока нет</td></tr>'; return; }
+  if (!sales.length) { tb.innerHTML = '<tr><td colspan="11" class="empty">Продаж пока нет</td></tr>'; return; }
   const allSales = db.sales;
-  tb.innerHTML = sales.map(s => {
+  let currentMonth = '';
+  let rows = '';
+  sales.slice(0, 50).forEach(s => {
     const idx = allSales.indexOf(s);
+    const effectiveDate = saleDate(s);
+    const month = effectiveDate ? effectiveDate.slice(0,7) : '';
+    // Разделитель месяца
+    if (month && month !== currentMonth) {
+      currentMonth = month;
+      const monthLabel = month ? new Date(month + '-01').toLocaleDateString('ru-RU', {month:'long', year:'numeric'}) : '';
+      rows += `<tr><td colspan="11" style="background:#f0f4ff;padding:6px 10px;font-size:11px;font-weight:600;color:#378ADD;border-top:2px solid #d0d8f0;letter-spacing:.03em;text-transform:uppercase">${monthLabel}</td></tr>`;
+    }
     const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
     const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : s.type === 'АВ' ? 'ba' : '';
     const bonusCell = s.status === 'Закрыта' && s.bonus > 0 ? `<span class="badge bg">+₽${fmt(s.bonus)}${s.bonusComm?' · '+s.bonusComm:''}</span>` : '';
     const compBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
-    return `<tr><td>${fmtDate(s.date)}</td><td>${s.shipDate ? fmtDate(s.shipDate) : (s.status==='Закрыта' ? '<span style="color:#c0392b;font-weight:500" title="Укажите дату отгрузки!">⚠️</span>' : '—')}</td><td>${compBadge}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td>₽${fmt(s.margin||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td>${bonusCell}</td><td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td></tr>`;
-  }).join('');
+    rows += `<tr><td>${fmtDate(s.date)}</td><td>${s.shipDate ? fmtDate(s.shipDate) : (s.status==='Закрыта' ? '<span style="color:#c0392b;font-weight:500" title="Укажите дату отгрузки!">⚠️</span>' : '—')}</td><td>${compBadge}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td>₽${fmt(s.margin||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td>${bonusCell}</td><td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td></tr>`;
+  });
+  tb.innerHTML = rows;
 }
 
 async function saveSale() {
