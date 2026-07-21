@@ -188,6 +188,7 @@ tr:last-child td{border-bottom:none}
         <div class="fl"><label>Сумма сделки, ₽</label><input type="number" min="0" step="1000" id="s-sum" placeholder="0" oninput="calcMarginAuto()"></div>
         <div class="fl" id="s-purchase-wrap"><label>Сумма покупки, ₽</label><input type="number" min="0" step="1000" id="s-purchase" placeholder="0" oninput="calcMarginAuto()"></div>
         <div class="fl" id="s-expense-wrap"><label>Расходы, ₽</label><input type="number" min="0" step="1000" id="s-expense" placeholder="0" oninput="calcMarginAuto()"></div>
+        <div class="fl span2" id="s-expense-desc-wrap"><label>Расшифровка расходов</label><input type="text" id="s-expense-desc" placeholder="Например: доставка 50 000, регистрация 15 000..."></div>
         <div class="fl" id="s-margin-wrap"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="s-margin" placeholder="0" style="background:#f8f8f8" readonly></div>
       </div>
       <div style="font-size:11px;color:#888;margin:12px 0 8px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Статус и закрытие</div>
@@ -387,6 +388,7 @@ tr:last-child td{border-bottom:none}
       <div class="fl"><label>Сумма сделки, ₽</label><input type="number" min="0" step="1000" id="e-sum" placeholder="0" oninput="calcMarginAutoEdit()"></div>
       <div class="fl" id="e-purchase-wrap"><label>Сумма покупки, ₽</label><input type="number" min="0" step="1000" id="e-purchase" placeholder="0" oninput="calcMarginAutoEdit()"></div>
       <div class="fl" id="e-expense-wrap"><label>Расходы, ₽</label><input type="number" min="0" step="1000" id="e-expense" placeholder="0" oninput="calcMarginAutoEdit()"></div>
+      <div class="fl span2"><label>Расшифровка расходов</label><input type="text" id="e-expense-desc" placeholder="Например: доставка 50 000, регистрация 15 000..."></div>
       <div class="fl"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="e-margin" placeholder="0" style="background:#f8f8f8" readonly></div>
       <div class="fl"><label>Статус</label><select id="e-status"><option>Аванс получен</option><option>В работе</option><option>Закрыта</option><option>Отменена</option></select></div>
       <div class="fl"><label>Дата отгрузки</label><input type="date" id="e-ship-date"></div>
@@ -827,6 +829,7 @@ async function saveSale() {
     sum: Number(document.getElementById('s-sum').value || 0),
     purchase: Number(document.getElementById('s-purchase').value || 0),
     expense: Number(document.getElementById('s-expense').value || 0),
+    expenseDesc: document.getElementById('s-expense-desc').value || '',
     margin: Number(document.getElementById('s-margin').value || 0),
     type: document.getElementById('s-type').value,
     status: sStatus,
@@ -840,7 +843,7 @@ async function saveSale() {
   const ok = document.getElementById('sale-ok');
   ok.style.display = 'block';
   setTimeout(() => ok.style.display = 'none', 3000);
-  ['s-company','s-client','s-contact-name','s-contact-phone','s-tech','s-sum','s-margin','s-purchase','s-expense','s-bonus','s-bonus-comm','s-comm','s-ship-date'].forEach(f => {
+  ['s-company','s-client','s-contact-name','s-contact-phone','s-tech','s-sum','s-margin','s-purchase','s-expense','s-expense-desc','s-bonus','s-bonus-comm','s-comm','s-ship-date'].forEach(f => {
     const el = document.getElementById(f); if (el) el.value = '';
   });
   renderMySales(id);
@@ -1604,6 +1607,7 @@ function openEditModal(idx) {
   document.getElementById('e-ship-date').value = s.shipDate || '';
   document.getElementById('e-purchase').value = s.purchase || 0;
   document.getElementById('e-expense').value = s.expense || 0;
+  document.getElementById('e-expense-desc').value = s.expenseDesc || '';
   document.getElementById('e-bonus').value = s.bonus || 0;
   document.getElementById('e-bonus-comm').value = s.bonusComm || '';
   document.getElementById('e-comm').value = s.comm || '';
