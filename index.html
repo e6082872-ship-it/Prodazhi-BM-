@@ -1030,16 +1030,16 @@ function renderBossMetrics() {
   const noShipDate = db.sales.filter(s => s.status === 'Закрыта' && !s.shipDate);
   document.getElementById('boss-metrics').innerHTML = `
     <div class="m"><div class="m-v">₽${fmt(totalRev)}</div><div class="m-l">Оборот</div></div>
-    <div class="m"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж закрыто</div></div>
+    <div class="m" onclick="showMarginDeals(null)" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж закрыто</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     <div class="m" onclick="showOpenDeals()" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">${totalOpenDeals}</div><div class="m-l">Текущих сделок</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     ${noShipDate.length > 0 ? `<div class="m" onclick="showNoShipDate()" style="cursor:pointer;border:2px solid #e74c3c;border-radius:10px;background:#fdeaea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#c0392b">${noShipDate.length}</div><div class="m-l" style="color:#c0392b">⚠️ Без отгрузки</div><div class="m-s" style="color:#c0392b">закрытые сделки</div></div>` : ''}
-    <div class="m"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа (всего)</div><div class="m-s">${marginPct !== null ? 'план '+marginPct+'%' : ''}</div></div>
-    <div class="m"><div class="m-v">₽${fmt(bmMarg)}</div><div class="m-l">Маржа БМ</div><div class="m-s">${bmCnt} прод.</div></div>
-    <div class="m"><div class="m-v">₽${fmt(asMarg)}</div><div class="m-l">Маржа АС</div><div class="m-s">${asCnt} прод.</div></div>
-    <div class="m"><div class="m-v">₽${fmt(totalMargAV)}</div><div class="m-l">АВ</div></div>
-    <div class="m"><div class="m-v">₽${fmt(totalBonus)}</div><div class="m-l">Бонусы всего</div></div>
-    <div class="m"><div class="m-v">₽${fmt(bonusFirstHalf)}</div><div class="m-l">К выплате до 15</div></div>
-    <div class="m"><div class="m-v">₽${fmt(bonusSecondHalf)}</div><div class="m-l">К выплате с 15</div></div>
+    <div class="m" onclick="showMarginDeals(null)" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа (всего)</div><div class="m-s" style="color:#378ADD">${marginPct !== null ? 'план '+marginPct+'% · ' : ''}↗ нажмите</div></div>
+    <div class="m" onclick="showMarginDeals('БМ')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bmMarg)}</div><div class="m-l">Маржа БМ</div><div class="m-s" style="color:#378ADD">${bmCnt} прод. · ↗ нажмите</div></div>
+    <div class="m" onclick="showMarginDeals('АС')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(asMarg)}</div><div class="m-l">Маржа АС</div><div class="m-s" style="color:#378ADD">${asCnt} прод. · ↗ нажмите</div></div>
+    <div class="m" onclick="showAVDeals()" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(totalMargAV)}</div><div class="m-l">АВ</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
+    <div class="m" onclick="showBonusDeals(null)" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(totalBonus)}</div><div class="m-l">Бонусы всего</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
+    <div class="m" onclick="showBonusDeals('first')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bonusFirstHalf)}</div><div class="m-l">К выплате до 15</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
+    <div class="m" onclick="showBonusDeals('second')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bonusSecondHalf)}</div><div class="m-l">К выплате с 15</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
   `;
 }
 
@@ -1534,6 +1534,141 @@ function showNoShipDate() {
         <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
       </tr>`;
     }).join('') + '</tbody></table></div>';
+  }
+  document.getElementById('open-deals-modal').classList.add('on');
+}
+
+function showMarginDeals(company) {
+  const m = currentMonth();
+  let deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.type !== 'АВ'), m);
+  if (company) deals = deals.filter(s => (s.company||'БМ') === company);
+  deals.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  const title = company ? `Маржа ${company} — сделки` : 'Маржа (всего) — сделки';
+  document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = title;
+  const el = document.getElementById('open-deals-content');
+  if (!deals.length) {
+    el.innerHTML = '<div class="empty">Сделок нет</div>';
+  } else {
+    const totalMarg = deals.reduce((s,x) => s + Number(x.margin||0), 0);
+    el.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:10px">Всего: ${deals.length} сделок, маржа ₽${fmt(totalMarg)}</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th style="width:50px">Дата</th>
+        <th style="width:35px">Комп.</th>
+        <th style="width:65px">Менеджер</th>
+        <th style="width:90px">Клиент</th>
+        <th style="width:90px">Техника</th>
+        <th style="width:65px">Сумма</th>
+        <th style="width:65px">Маржа</th>
+        <th style="width:30px"></th>
+      </tr></thead>
+      <tbody>` +
+      deals.map(s => {
+        const idx = db.sales.indexOf(s);
+        const mgr = mgrById(s.mgr);
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        return `<tr>
+          <td>${fmtDate(s.date)}</td>
+          <td>${cBadge}</td>
+          <td>${mgr ? mgr.name : s.mgr}</td>
+          <td>${s.client||'—'}</td>
+          <td>${s.tech||'—'}</td>
+          <td>₽${fmt(s.sum||0)}</td>
+          <td>₽${fmt(s.margin||0)}</td>
+          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+        </tr>`;
+      }).join('') +
+    '</tbody></table></div>';
+  }
+  document.getElementById('open-deals-modal').classList.add('on');
+}
+
+function showAVDeals() {
+  const m = currentMonth();
+  const deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.type === 'АВ'), m);
+  deals.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'АВ — сделки';
+  const el = document.getElementById('open-deals-content');
+  if (!deals.length) {
+    el.innerHTML = '<div class="empty">Сделок нет</div>';
+  } else {
+    const totalMarg = deals.reduce((s,x) => s + Number(x.margin||0), 0);
+    el.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:10px">Всего: ${deals.length} сделок, сумма ₽${fmt(totalMarg)}</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th style="width:50px">Дата</th>
+        <th style="width:35px">Комп.</th>
+        <th style="width:65px">Менеджер</th>
+        <th style="width:90px">Клиент</th>
+        <th style="width:90px">Техника</th>
+        <th style="width:65px">Сумма</th>
+        <th style="width:30px"></th>
+      </tr></thead>
+      <tbody>` +
+      deals.map(s => {
+        const idx = db.sales.indexOf(s);
+        const mgr = mgrById(s.mgr);
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        return `<tr>
+          <td>${fmtDate(s.date)}</td>
+          <td>${cBadge}</td>
+          <td>${mgr ? mgr.name : s.mgr}</td>
+          <td>${s.client||'—'}</td>
+          <td>${s.tech||'—'}</td>
+          <td>₽${fmt(s.margin||0)}</td>
+          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+        </tr>`;
+      }).join('') +
+    '</tbody></table></div>';
+  }
+  document.getElementById('open-deals-modal').classList.add('on');
+}
+
+function showBonusDeals(half) {
+  const m = currentMonth();
+  let deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && Number(s.bonus||0) > 0), m);
+  if (half) {
+    deals = deals.filter(s => {
+      const d = s.shipDate || s.date || '';
+      const day = parseInt(d.split('-')[2]||'0',10);
+      return half === 'first' ? (day >= 1 && day <= 15) : day > 15;
+    });
+  }
+  deals.sort((a,b) => (b.shipDate||b.date||'').localeCompare(a.shipDate||a.date||''));
+  const title = half === 'first' ? 'Бонусы к выплате до 15 — сделки' : half === 'second' ? 'Бонусы к выплате с 15 — сделки' : 'Бонусы всего — сделки';
+  document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = title;
+  const el = document.getElementById('open-deals-content');
+  if (!deals.length) {
+    el.innerHTML = '<div class="empty">Сделок нет</div>';
+  } else {
+    const totalBonusSum = deals.reduce((s,x) => s + Number(x.bonus||0), 0);
+    el.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:10px">Всего: ${deals.length} сделок, бонусов ₽${fmt(totalBonusSum)}</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th style="width:50px">Отгрузка</th>
+        <th style="width:35px">Комп.</th>
+        <th style="width:65px">Менеджер</th>
+        <th style="width:90px">Клиент</th>
+        <th style="width:90px">Техника</th>
+        <th style="width:65px">Бонус</th>
+        <th style="width:30px"></th>
+      </tr></thead>
+      <tbody>` +
+      deals.map(s => {
+        const idx = db.sales.indexOf(s);
+        const mgr = mgrById(s.mgr);
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        return `<tr>
+          <td>${fmtDate(s.shipDate||s.date)}</td>
+          <td>${cBadge}</td>
+          <td>${mgr ? mgr.name : s.mgr}</td>
+          <td>${s.client||'—'}</td>
+          <td>${s.tech||'—'}</td>
+          <td>₽${fmt(s.bonus||0)}</td>
+          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+        </tr>`;
+      }).join('') +
+    '</tbody></table></div>';
   }
   document.getElementById('open-deals-modal').classList.add('on');
 }
