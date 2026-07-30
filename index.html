@@ -405,9 +405,7 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <script>
-const BIN_ID = '6a272392da38895dfe9c0819';
-const API_KEY = '$2a$10$Gg0OKnyJ2Q9tl.7wqnhF/u4M9BFT6g8ht0e1Dv0jyd7HS1zpw7Lgu';
-const BIN_URL = 'https://api.jsonbin.io/v3/b/' + BIN_ID;
+const DB_URL = 'https://bm-avto-default-rtdb.firebaseio.com/dashboard.json';
 
 const MANAGERS = [
   {id:'ilya',  name:'Илья',    cls:'av-a', color:'#185FA5', plan:6000000},
@@ -424,11 +422,9 @@ let saving = false;
 
 async function loadDB() {
   try {
-    const r = await fetch(BIN_URL + '/latest', {
-      headers: {'X-Master-Key': API_KEY}
-    });
+    const r = await fetch(DB_URL);
     const json = await r.json();
-    db = json.record || {sales:[], activity:[], plans:{}};
+    db = json || {sales:[], activity:[], plans:{}};
     if (!db.sales) db.sales = [];
     if (!db.activity) db.activity = [];
     if (!db.plans) db.plans = {};
@@ -443,9 +439,9 @@ async function saveDB() {
   saving = true;
   setSyncDot('loading');
   try {
-    await fetch(BIN_URL, {
+    await fetch(DB_URL, {
       method: 'PUT',
-      headers: {'Content-Type':'application/json','X-Master-Key': API_KEY},
+      headers: {'Content-Type':'application/json'},
       body: JSON.stringify(db)
     });
     setSyncDot('ok');
