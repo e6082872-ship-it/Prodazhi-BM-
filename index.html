@@ -189,6 +189,7 @@ tr:last-child td{border-bottom:none}
         <div class="fl" id="s-purchase-wrap"><label>Сумма покупки, ₽</label><input type="number" min="0" step="1000" id="s-purchase" placeholder="0" oninput="calcMarginAuto()"></div>
         <div class="fl" id="s-expense-wrap"><label>Расходы, ₽</label><input type="number" min="0" step="1000" id="s-expense" placeholder="0" oninput="calcMarginAuto()"></div>
         <div class="fl span2" id="s-expense-desc-wrap"><label>Расшифровка расходов</label><input type="text" id="s-expense-desc" placeholder="Например: доставка 50 000, регистрация 15 000..."></div>
+        <div class="fl"><label>Личных денег менеджера (к возврату), ₽</label><input type="number" min="0" step="500" id="s-reimburse" placeholder="0"></div>
         <div class="fl" id="s-margin-wrap"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="s-margin" placeholder="0" style="background:#f8f8f8" readonly></div>
       </div>
       <div style="font-size:11px;color:#888;margin:12px 0 8px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Статус и закрытие</div>
@@ -389,6 +390,8 @@ tr:last-child td{border-bottom:none}
       <div class="fl" id="e-purchase-wrap"><label>Сумма покупки, ₽</label><input type="number" min="0" step="1000" id="e-purchase" placeholder="0" oninput="calcMarginAutoEdit()"></div>
       <div class="fl" id="e-expense-wrap"><label>Расходы, ₽</label><input type="number" min="0" step="1000" id="e-expense" placeholder="0" oninput="calcMarginAutoEdit()"></div>
       <div class="fl span2"><label>Расшифровка расходов</label><input type="text" id="e-expense-desc" placeholder="Например: доставка 50 000, регистрация 15 000..."></div>
+      <div class="fl"><label>Личных денег менеджера (к возврату), ₽</label><input type="number" min="0" step="500" id="e-reimburse" placeholder="0"></div>
+      <div class="fl" style="display:flex;align-items:flex-end;padding-bottom:8px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;font-size:13px"><input type="checkbox" id="e-reimbursed" style="width:16px;height:16px"> Возвращено менеджеру</label></div>
       <div class="fl"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="e-margin" placeholder="0" style="background:#f8f8f8" readonly></div>
       <div class="fl"><label>Статус</label><select id="e-status"><option>Аванс получен</option><option>В работе</option><option>Закрыта</option><option>Отменена</option></select></div>
       <div class="fl"><label>Дата отгрузки</label><input type="date" id="e-ship-date"></div>
@@ -767,6 +770,7 @@ function renderMyMetrics(id) {
   const planPct = m ? Math.round(k.rev / m.plan * 100) : 0;
   const el = document.getElementById('my-metrics');
   if (!el) return;
+  const pendingReimburse = db.sales.filter(s => s.mgr === id && Number(s.reimburse||0) > 0 && !s.reimbursed).reduce((s,x) => s + Number(x.reimburse||0), 0);
   el.innerHTML = `
     <div class="m"><div class="m-v">${k.cnt}</div><div class="m-l">Продаж</div></div>
     <div class="m"><div class="m-v">₽${fmt(k.rev)}</div><div class="m-l">Оборот</div><div class="m-s">план ${planPct}%</div></div>
@@ -774,6 +778,7 @@ function renderMyMetrics(id) {
     <div class="m"><div class="m-v">${k.contacts}</div><div class="m-l">Контактов</div></div>
     <div class="m"><div class="m-v">${k.bookings}</div><div class="m-l">Бронирований</div></div>
     ${k.marginAV > 0 ? `<div class="m"><div class="m-v">₽${fmt(k.marginAV)}</div><div class="m-l">АВ</div></div>` : ''}
+    ${pendingReimburse > 0 ? `<div class="m" style="border:2px solid #f0a500;border-radius:10px;background:#fff8ea"><div class="m-v" style="color:#b8860b">₽${fmt(pendingReimburse)}</div><div class="m-l" style="color:#b8860b">Вам должны вернуть</div></div>` : ''}
   `;
 }
 
@@ -826,6 +831,8 @@ async function saveSale() {
     purchase: Number(document.getElementById('s-purchase').value || 0),
     expense: Number(document.getElementById('s-expense').value || 0),
     expenseDesc: document.getElementById('s-expense-desc').value || '',
+    reimburse: Number(document.getElementById('s-reimburse').value || 0),
+    reimbursed: false,
     margin: Number(document.getElementById('s-margin').value || 0),
     type: document.getElementById('s-type').value,
     status: sStatus,
@@ -839,7 +846,7 @@ async function saveSale() {
   const ok = document.getElementById('sale-ok');
   ok.style.display = 'block';
   setTimeout(() => ok.style.display = 'none', 3000);
-  ['s-company','s-client','s-contact-name','s-contact-phone','s-tech','s-sum','s-margin','s-purchase','s-expense','s-expense-desc','s-bonus','s-bonus-comm','s-comm','s-ship-date'].forEach(f => {
+  ['s-company','s-client','s-contact-name','s-contact-phone','s-tech','s-sum','s-margin','s-purchase','s-expense','s-expense-desc','s-reimburse','s-bonus','s-bonus-comm','s-comm','s-ship-date'].forEach(f => {
     const el = document.getElementById(f); if (el) el.value = '';
   });
   renderMySales(id);
@@ -1028,6 +1035,9 @@ function renderBossMetrics() {
   const asCnt = asClosed.length;
   const totalOpenDeals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен').length;
   const noShipDate = db.sales.filter(s => s.status === 'Закрыта' && !s.shipDate);
+  // Возврат личных денег менеджерам — не привязан к месяцу, это долг компании до момента выплаты
+  const reimburseDeals = db.sales.filter(s => Number(s.reimburse||0) > 0 && !s.reimbursed);
+  const reimburseTotal = reimburseDeals.reduce((s,x) => s + Number(x.reimburse||0), 0);
   document.getElementById('boss-metrics').innerHTML = `
     <div class="m"><div class="m-v">₽${fmt(totalRev)}</div><div class="m-l">Оборот</div></div>
     <div class="m" onclick="showMarginDeals(null)" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж закрыто</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
@@ -1040,6 +1050,7 @@ function renderBossMetrics() {
     <div class="m" onclick="showBonusDeals(null)" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(totalBonus)}</div><div class="m-l">Бонусы всего</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     <div class="m" onclick="showBonusDeals('first')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bonusFirstHalf)}</div><div class="m-l">К выплате до 15</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     <div class="m" onclick="showBonusDeals('second')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bonusSecondHalf)}</div><div class="m-l">К выплате с 15</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
+    ${reimburseTotal > 0 ? `<div class="m" onclick="showReimburseDeals()" style="cursor:pointer;border:2px solid #f0a500;border-radius:10px;background:#fff8ea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#b8860b">₽${fmt(reimburseTotal)}</div><div class="m-l" style="color:#b8860b">К возврату менеджерам</div><div class="m-s" style="color:#b8860b">${reimburseDeals.length} записей · ↗ нажмите</div></div>` : ''}
   `;
 }
 
@@ -1673,6 +1684,58 @@ function showBonusDeals(half) {
   document.getElementById('open-deals-modal').classList.add('on');
 }
 
+function showReimburseDeals() {
+  const deals = db.sales.filter(s => Number(s.reimburse||0) > 0 && !s.reimbursed);
+  document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'К возврату менеджерам';
+  const el = document.getElementById('open-deals-content');
+  if (!deals.length) {
+    el.innerHTML = '<div class="empty">Возвращать никому не нужно ✅</div>';
+  } else {
+    const byMgr = {};
+    deals.forEach(s => {
+      const idx = db.sales.indexOf(s);
+      if (!byMgr[s.mgr]) byMgr[s.mgr] = [];
+      byMgr[s.mgr].push({s, idx});
+    });
+    let html = '';
+    Object.keys(byMgr).forEach(mgrId => {
+      const mgr = mgrById(mgrId);
+      const items = byMgr[mgrId];
+      const total = items.reduce((sum,x) => sum + Number(x.s.reimburse||0), 0);
+      const rows = items.map(({s, idx}) => `<tr>
+            <td>${fmtDate(saleDate(s))}</td>
+            <td>${s.client||'—'}</td>
+            <td>${s.tech||'—'}</td>
+            <td>₽${fmt(s.reimburse||0)}</td>
+            <td><button class="btn" style="font-size:11px;padding:4px 8px" onclick="markReimbursed(${idx})">Возвращено</button></td>
+          </tr>`).join('');
+      html += `<div style="margin-bottom:16px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px">${mgr ? mgr.name : mgrId} — ₽${fmt(total)}</div>
+        <div style="overflow-x:auto"><table>
+          <thead><tr>
+            <th style="width:50px">Дата</th>
+            <th style="width:90px">Клиент</th>
+            <th style="width:90px">Техника</th>
+            <th style="width:65px">Сумма</th>
+            <th style="width:80px"></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+      </div>`;
+    });
+    el.innerHTML = html;
+  }
+  document.getElementById('open-deals-modal').classList.add('on');
+}
+
+async function markReimbursed(idx) {
+  if (!db.sales[idx]) return;
+  db.sales[idx].reimbursed = true;
+  await saveDB();
+  showReimburseDeals();
+  renderBossMetrics();
+}
+
 function showOpenDeals() {
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'Текущие сделки';
   const deals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен');
@@ -1739,6 +1802,8 @@ function openEditModal(idx) {
   document.getElementById('e-purchase').value = s.purchase || 0;
   document.getElementById('e-expense').value = s.expense || 0;
   document.getElementById('e-expense-desc').value = s.expenseDesc || '';
+  document.getElementById('e-reimburse').value = s.reimburse || 0;
+  document.getElementById('e-reimbursed').checked = !!s.reimbursed;
   document.getElementById('e-bonus').value = s.bonus || 0;
   document.getElementById('e-bonus-comm').value = s.bonusComm || '';
   document.getElementById('e-comm').value = s.comm || '';
@@ -1774,6 +1839,9 @@ async function saveEditSale() {
     status: document.getElementById('e-status').value,
     purchase: Number(document.getElementById('e-purchase').value || 0),
     expense: Number(document.getElementById('e-expense').value || 0),
+    expenseDesc: document.getElementById('e-expense-desc').value || '',
+    reimburse: Number(document.getElementById('e-reimburse').value || 0),
+    reimbursed: document.getElementById('e-reimbursed').checked,
     bonus: document.getElementById('e-status').value === 'Закрыта' ? Number(document.getElementById('e-bonus').value || 0) : 0,
     bonusComm: document.getElementById('e-status').value === 'Закрыта' ? (document.getElementById('e-bonus-comm').value || '') : '',
     comm: document.getElementById('e-comm').value || ''
