@@ -396,7 +396,6 @@ tr:last-child td{border-bottom:none}
       <div class="fl"><label>Личных денег менеджера (к возврату), ₽</label><input type="number" min="0" step="500" id="e-reimburse" placeholder="0"></div>
       <div class="fl" style="display:flex;align-items:flex-end;padding-bottom:8px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;font-size:13px"><input type="checkbox" id="e-reimbursed" style="width:16px;height:16px"> Возвращено менеджеру</label></div>
       <div class="fl"><label>Доля инвестора, ₽</label><input type="number" min="0" step="500" id="e-investor-share" placeholder="0"></div>
-      <div class="fl" style="display:flex;align-items:flex-end;padding-bottom:8px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;font-size:13px"><input type="checkbox" id="e-investor-paid" style="width:16px;height:16px"> Выплачено инвестору</label></div>
       <div class="fl"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="e-margin" placeholder="0" style="background:#f8f8f8" readonly></div>
       <div class="fl"><label>Статус</label><select id="e-status"><option>Аванс получен</option><option>В работе</option><option>Закрыта</option><option>Отменена</option></select></div>
       <div class="fl"><label>Дата отгрузки</label><input type="date" id="e-ship-date"></div>
@@ -847,7 +846,6 @@ async function saveSale() {
     reimburse: Number(document.getElementById('s-reimburse').value || 0),
     reimbursed: false,
     investorShare: Number(document.getElementById('s-investor-share').value || 0),
-    investorPaid: false,
     margin: Number(document.getElementById('s-margin').value || 0),
     type: document.getElementById('s-type').value,
     status: sStatus,
@@ -1055,7 +1053,7 @@ function renderBossMetrics() {
   // Возврат личных денег менеджерам — не привязан к месяцу, это долг компании до момента выплаты
   const reimburseDeals = db.sales.filter(s => Number(s.reimburse||0) > 0 && !s.reimbursed);
   const reimburseTotal = reimburseDeals.reduce((s,x) => s + Number(x.reimburse||0), 0);
-  const investorDeals = db.sales.filter(s => Number(s.investorShare||0) > 0 && !s.investorPaid);
+  const investorDeals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && Number(s.investorShare||0) > 0), m);
   const investorTotal = investorDeals.reduce((s,x) => s + Number(x.investorShare||0), 0);
   document.getElementById('boss-metrics').innerHTML = `
     <div class="m"><div class="m-v">₽${fmt(totalRev)}</div><div class="m-l">Оборот</div></div>
@@ -1071,7 +1069,7 @@ function renderBossMetrics() {
     <div class="m" onclick="showBonusDeals('first')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bonusFirstHalf)}</div><div class="m-l">К выплате до 15</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     <div class="m" onclick="showBonusDeals('second')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bonusSecondHalf)}</div><div class="m-l">К выплате с 15</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     ${reimburseTotal > 0 ? `<div class="m" onclick="showReimburseDeals()" style="cursor:pointer;border:2px solid #f0a500;border-radius:10px;background:#fff8ea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#b8860b">₽${fmt(reimburseTotal)}</div><div class="m-l" style="color:#b8860b">К возврату менеджерам</div><div class="m-s" style="color:#b8860b">${reimburseDeals.length} записей · ↗ нажмите</div></div>` : ''}
-    ${investorTotal > 0 ? `<div class="m" onclick="showInvestorDeals()" style="cursor:pointer;border:2px solid #6b5ce0;border-radius:10px;background:#f4f2ff;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#4a3fb0">₽${fmt(investorTotal)}</div><div class="m-l" style="color:#4a3fb0">К выплате инвестору</div><div class="m-s" style="color:#4a3fb0">${investorDeals.length} записей · ↗ нажмите</div></div>` : ''}
+    ${investorTotal > 0 ? `<div class="m" onclick="showInvestorDeals()" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(investorTotal)}</div><div class="m-l">Доля инвестора</div><div class="m-s" style="color:#378ADD">${investorDeals.length} сделок · ↗ нажмите</div></div>` : ''}
   `;
 }
 
@@ -1329,7 +1327,6 @@ function exportSalesToExcel() {
       'Возврат менеджеру': s.reimburse || 0,
       'Возврат выплачен': Number(s.reimburse||0) > 0 ? (s.reimbursed ? 'да' : 'нет') : '',
       'Доля инвестора': s.investorShare || 0,
-      'Инвестору выплачено': Number(s.investorShare||0) > 0 ? (s.investorPaid ? 'да' : 'нет') : '',
       'Комментарий': s.comm || ''
     };
   });
@@ -1848,15 +1845,16 @@ function showStaleDeals() {
 }
 
 function showInvestorDeals() {
-  const deals = db.sales.filter(s => Number(s.investorShare||0) > 0 && !s.investorPaid);
+  const m = currentMonth();
+  const deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && Number(s.investorShare||0) > 0), m);
   deals.sort((a,b) => (saleDate(b)||'').localeCompare(saleDate(a)||''));
-  document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'К выплате инвестору';
+  document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'Доля инвестора — сделки';
   const el = document.getElementById('open-deals-content');
   if (!deals.length) {
-    el.innerHTML = '<div class="empty">Выплачивать инвестору нечего ✅</div>';
+    el.innerHTML = '<div class="empty">Сделок нет</div>';
   } else {
     const total = deals.reduce((s,x) => s + Number(x.investorShare||0), 0);
-    el.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:10px">Всего: ${deals.length} записей, ₽${fmt(total)}</div>
+    el.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:10px">Всего: ${deals.length} сделок, ₽${fmt(total)}</div>
     <div style="overflow-x:auto"><table>
       <thead><tr>
         <th style="width:50px">Дата</th>
@@ -1865,7 +1863,7 @@ function showInvestorDeals() {
         <th style="width:90px">Клиент</th>
         <th style="width:90px">Техника</th>
         <th style="width:65px">Сумма</th>
-        <th style="width:80px"></th>
+        <th style="width:30px"></th>
       </tr></thead>
       <tbody>` +
       deals.map(s => {
@@ -1879,20 +1877,12 @@ function showInvestorDeals() {
           <td>${s.client||'—'}</td>
           <td>${s.tech||'—'}</td>
           <td>₽${fmt(s.investorShare||0)}</td>
-          <td><button class="btn" style="font-size:11px;padding:4px 8px" onclick="markInvestorPaid(${idx})">Выплачено</button></td>
+          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
         </tr>`;
       }).join('') +
     '</tbody></table></div>';
   }
   document.getElementById('open-deals-modal').classList.add('on');
-}
-
-async function markInvestorPaid(idx) {
-  if (!db.sales[idx]) return;
-  db.sales[idx].investorPaid = true;
-  await saveDB();
-  showInvestorDeals();
-  renderBossMetrics();
 }
 
 function showOpenDeals() {
@@ -1964,7 +1954,6 @@ function openEditModal(idx) {
   document.getElementById('e-reimburse').value = s.reimburse || 0;
   document.getElementById('e-reimbursed').checked = !!s.reimbursed;
   document.getElementById('e-investor-share').value = s.investorShare || 0;
-  document.getElementById('e-investor-paid').checked = !!s.investorPaid;
   document.getElementById('e-bonus').value = s.bonus || 0;
   document.getElementById('e-bonus-comm').value = s.bonusComm || '';
   document.getElementById('e-comm').value = s.comm || '';
@@ -2004,7 +1993,6 @@ async function saveEditSale() {
     reimburse: Number(document.getElementById('e-reimburse').value || 0),
     reimbursed: document.getElementById('e-reimbursed').checked,
     investorShare: Number(document.getElementById('e-investor-share').value || 0),
-    investorPaid: document.getElementById('e-investor-paid').checked,
     bonus: document.getElementById('e-status').value === 'Закрыта' ? Number(document.getElementById('e-bonus').value || 0) : 0,
     bonusComm: document.getElementById('e-status').value === 'Закрыта' ? (document.getElementById('e-bonus-comm').value || '') : '',
     comm: document.getElementById('e-comm').value || ''
