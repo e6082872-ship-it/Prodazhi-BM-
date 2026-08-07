@@ -99,6 +99,7 @@ tr:last-child td{border-bottom:none}
 .btn-del{padding:3px 8px;font-size:10px;border-radius:6px;border:1px solid #fdd;background:#fff;cursor:pointer;color:#c0392b;font-family:inherit}
 .btn-del:hover{background:#fdeaea}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="app" id="app">
@@ -190,6 +191,7 @@ tr:last-child td{border-bottom:none}
         <div class="fl" id="s-expense-wrap"><label>Расходы, ₽</label><input type="number" min="0" step="1000" id="s-expense" placeholder="0" oninput="calcMarginAuto()"></div>
         <div class="fl span2" id="s-expense-desc-wrap"><label>Расшифровка расходов</label><input type="text" id="s-expense-desc" placeholder="Например: доставка 50 000, регистрация 15 000..."></div>
         <div class="fl"><label>Личных денег менеджера (к возврату), ₽</label><input type="number" min="0" step="500" id="s-reimburse" placeholder="0"></div>
+        <div class="fl"><label>Доля инвестора, ₽</label><input type="number" min="0" step="500" id="s-investor-share" placeholder="0"></div>
         <div class="fl" id="s-margin-wrap"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="s-margin" placeholder="0" style="background:#f8f8f8" readonly></div>
       </div>
       <div style="font-size:11px;color:#888;margin:12px 0 8px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Статус и закрытие</div>
@@ -280,6 +282,7 @@ tr:last-child td{border-bottom:none}
           </div>
         </div>
         <select id="filter-status" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Любой статус</option><option>Закрыта</option><option>В работе</option><option>Аванс получен</option><option>Отменена</option></select>
+        <button onclick="exportSalesToExcel()" style="font-size:12px;padding:5px 10px;border:1px solid #1a7a4a;border-radius:8px;background:#e6f4ee;color:#1a7a4a;cursor:pointer;font-weight:500">⬇ Экспорт в Excel</button>
       </div>
       <div style="overflow-x:auto">
         <table>
@@ -392,6 +395,8 @@ tr:last-child td{border-bottom:none}
       <div class="fl span2"><label>Расшифровка расходов</label><input type="text" id="e-expense-desc" placeholder="Например: доставка 50 000, регистрация 15 000..."></div>
       <div class="fl"><label>Личных денег менеджера (к возврату), ₽</label><input type="number" min="0" step="500" id="e-reimburse" placeholder="0"></div>
       <div class="fl" style="display:flex;align-items:flex-end;padding-bottom:8px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;font-size:13px"><input type="checkbox" id="e-reimbursed" style="width:16px;height:16px"> Возвращено менеджеру</label></div>
+      <div class="fl"><label>Доля инвестора, ₽</label><input type="number" min="0" step="500" id="e-investor-share" placeholder="0"></div>
+      <div class="fl" style="display:flex;align-items:flex-end;padding-bottom:8px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;font-size:13px"><input type="checkbox" id="e-investor-paid" style="width:16px;height:16px"> Выплачено инвестору</label></div>
       <div class="fl"><label>Маржа, ₽ <span style="font-size:10px;color:#1a7a4a">(авто)</span></label><input type="number" id="e-margin" placeholder="0" style="background:#f8f8f8" readonly></div>
       <div class="fl"><label>Статус</label><select id="e-status"><option>Аванс получен</option><option>В работе</option><option>Закрыта</option><option>Отменена</option></select></div>
       <div class="fl"><label>Дата отгрузки</label><input type="date" id="e-ship-date"></div>
@@ -409,6 +414,7 @@ tr:last-child td{border-bottom:none}
 
 <script>
 const DB_URL = 'https://bm-avto-default-rtdb.firebaseio.com/dashboard.json';
+const BOSS_PIN = '2026'; // PIN для входа в режим руководителя — поменяйте на свой
 
 const MANAGERS = [
   {id:'ilya',  name:'Илья',    cls:'av-a', color:'#185FA5', plan:6000000},
@@ -648,7 +654,7 @@ function buildLogin() {
       <span class="role-badge role-mgr">Менеджер</span>
     </div>`;
   });
-  el.innerHTML += `<div class="mgr-card" onclick="login('boss')">
+  el.innerHTML += `<div class="mgr-card" onclick="loginBoss()">
     <div class="avatar av-boss" style="width:40px;height:40px;font-size:14px">РУ</div>
     <div class="mgr-info">
       <div class="mgr-name">Руководитель</div>
@@ -663,6 +669,13 @@ function login(id) {
   show('s-login', false);
   if (id === 'boss') { show('s-boss', true); buildBoss(); }
   else { show('s-mgr', true); buildMgr(id); }
+}
+
+function loginBoss() {
+  const pin = prompt('Введите PIN для входа в режим руководителя:');
+  if (pin === null) return;
+  if (pin !== BOSS_PIN) { alert('Неверный PIN'); return; }
+  login('boss');
 }
 
 function logout() {
@@ -833,6 +846,8 @@ async function saveSale() {
     expenseDesc: document.getElementById('s-expense-desc').value || '',
     reimburse: Number(document.getElementById('s-reimburse').value || 0),
     reimbursed: false,
+    investorShare: Number(document.getElementById('s-investor-share').value || 0),
+    investorPaid: false,
     margin: Number(document.getElementById('s-margin').value || 0),
     type: document.getElementById('s-type').value,
     status: sStatus,
@@ -846,7 +861,7 @@ async function saveSale() {
   const ok = document.getElementById('sale-ok');
   ok.style.display = 'block';
   setTimeout(() => ok.style.display = 'none', 3000);
-  ['s-company','s-client','s-contact-name','s-contact-phone','s-tech','s-sum','s-margin','s-purchase','s-expense','s-expense-desc','s-reimburse','s-bonus','s-bonus-comm','s-comm','s-ship-date'].forEach(f => {
+  ['s-company','s-client','s-contact-name','s-contact-phone','s-tech','s-sum','s-margin','s-purchase','s-expense','s-expense-desc','s-reimburse','s-investor-share','s-bonus','s-bonus-comm','s-comm','s-ship-date'].forEach(f => {
     const el = document.getElementById(f); if (el) el.value = '';
   });
   renderMySales(id);
@@ -1035,14 +1050,19 @@ function renderBossMetrics() {
   const asCnt = asClosed.length;
   const totalOpenDeals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен').length;
   const noShipDate = db.sales.filter(s => s.status === 'Закрыта' && !s.shipDate);
+  const STALE_DAYS = 14;
+  const staleDeals = db.sales.filter(s => (s.status === 'В работе' || s.status === 'Аванс получен') && s.ts && (Date.now() - s.ts) > STALE_DAYS * 86400000);
   // Возврат личных денег менеджерам — не привязан к месяцу, это долг компании до момента выплаты
   const reimburseDeals = db.sales.filter(s => Number(s.reimburse||0) > 0 && !s.reimbursed);
   const reimburseTotal = reimburseDeals.reduce((s,x) => s + Number(x.reimburse||0), 0);
+  const investorDeals = db.sales.filter(s => Number(s.investorShare||0) > 0 && !s.investorPaid);
+  const investorTotal = investorDeals.reduce((s,x) => s + Number(x.investorShare||0), 0);
   document.getElementById('boss-metrics').innerHTML = `
     <div class="m"><div class="m-v">₽${fmt(totalRev)}</div><div class="m-l">Оборот</div></div>
     <div class="m" onclick="showMarginDeals(null)" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж закрыто</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     <div class="m" onclick="showOpenDeals()" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">${totalOpenDeals}</div><div class="m-l">Текущих сделок</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     ${noShipDate.length > 0 ? `<div class="m" onclick="showNoShipDate()" style="cursor:pointer;border:2px solid #e74c3c;border-radius:10px;background:#fdeaea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#c0392b">${noShipDate.length}</div><div class="m-l" style="color:#c0392b">⚠️ Без отгрузки</div><div class="m-s" style="color:#c0392b">закрытые сделки</div></div>` : ''}
+    ${staleDeals.length > 0 ? `<div class="m" onclick="showStaleDeals()" style="cursor:pointer;border:2px solid #e74c3c;border-radius:10px;background:#fdeaea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#c0392b">${staleDeals.length}</div><div class="m-l" style="color:#c0392b">⚠️ Зависшие сделки</div><div class="m-s" style="color:#c0392b">без движения >${STALE_DAYS} дн. · ↗ нажмите</div></div>` : ''}
     <div class="m" onclick="showMarginDeals(null)" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа (всего)</div><div class="m-s" style="color:#378ADD">${marginPct !== null ? 'план '+marginPct+'% · ' : ''}↗ нажмите</div></div>
     <div class="m" onclick="showMarginDeals('БМ')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bmMarg)}</div><div class="m-l">Маржа БМ</div><div class="m-s" style="color:#378ADD">${bmCnt} прод. · ↗ нажмите</div></div>
     <div class="m" onclick="showMarginDeals('АС')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(asMarg)}</div><div class="m-l">Маржа АС</div><div class="m-s" style="color:#378ADD">${asCnt} прод. · ↗ нажмите</div></div>
@@ -1051,6 +1071,7 @@ function renderBossMetrics() {
     <div class="m" onclick="showBonusDeals('first')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bonusFirstHalf)}</div><div class="m-l">К выплате до 15</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     <div class="m" onclick="showBonusDeals('second')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bonusSecondHalf)}</div><div class="m-l">К выплате с 15</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     ${reimburseTotal > 0 ? `<div class="m" onclick="showReimburseDeals()" style="cursor:pointer;border:2px solid #f0a500;border-radius:10px;background:#fff8ea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#b8860b">₽${fmt(reimburseTotal)}</div><div class="m-l" style="color:#b8860b">К возврату менеджерам</div><div class="m-s" style="color:#b8860b">${reimburseDeals.length} записей · ↗ нажмите</div></div>` : ''}
+    ${investorTotal > 0 ? `<div class="m" onclick="showInvestorDeals()" style="cursor:pointer;border:2px solid #6b5ce0;border-radius:10px;background:#f4f2ff;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#4a3fb0">₽${fmt(investorTotal)}</div><div class="m-l" style="color:#4a3fb0">К выплате инвестору</div><div class="m-s" style="color:#4a3fb0">${investorDeals.length} записей · ↗ нажмите</div></div>` : ''}
   `;
 }
 
@@ -1269,6 +1290,55 @@ function updateTypeLabel() {
   const checked = Array.from(document.querySelectorAll('.type-filter-cb:checked')).map(cb => cb.value);
   const label = document.getElementById('type-filter-label');
   if (label) label.textContent = checked.length === 0 ? 'Любой тип' : checked.join(', ');
+}
+
+function exportSalesToExcel() {
+  const compF   = document.getElementById('filter-company').value;
+  const mgrF    = document.getElementById('filter-mgr').value;
+  const typeCBs = Array.from(document.querySelectorAll('.type-filter-cb:checked')).map(cb => cb.value);
+  const statF   = document.getElementById('filter-status').value;
+  const m = currentMonth();
+  let sales = filterSalesByMonth(db.sales, m);
+  if (compF) sales = sales.filter(s => (s.company||'БМ') === compF);
+  if (mgrF)  sales = sales.filter(s => s.mgr === mgrF);
+  if (typeCBs.length) sales = sales.filter(s => typeCBs.includes(s.type));
+  if (statF) sales = sales.filter(s => s.status === statF);
+
+  if (!sales.length) { alert('Нет данных для экспорта по текущим фильтрам'); return; }
+  if (typeof XLSX === 'undefined') { alert('Не удалось загрузить модуль экспорта. Проверьте интернет-соединение и обновите страницу.'); return; }
+
+  const rows = sales.map(s => {
+    const mgr = mgrById(s.mgr);
+    return {
+      'Дата': s.date || '',
+      'Отгрузка': s.shipDate || '',
+      'Компания': s.company || 'БМ',
+      'Менеджер': mgr ? mgr.name : s.mgr,
+      'Клиент': s.client || '',
+      'Контакт': s.contactName || '',
+      'Телефон': s.contactPhone || '',
+      'Техника': s.tech || '',
+      'Сумма': s.sum || 0,
+      'Покупка': s.purchase || 0,
+      'Расходы': s.expense || 0,
+      'Расшифровка расходов': s.expenseDesc || '',
+      'Маржа': s.margin || 0,
+      'Тип': s.type || '',
+      'Статус': s.status || '',
+      'Бонус': s.bonus || 0,
+      'Возврат менеджеру': s.reimburse || 0,
+      'Возврат выплачен': Number(s.reimburse||0) > 0 ? (s.reimbursed ? 'да' : 'нет') : '',
+      'Доля инвестора': s.investorShare || 0,
+      'Инвестору выплачено': Number(s.investorShare||0) > 0 ? (s.investorPaid ? 'да' : 'нет') : '',
+      'Комментарий': s.comm || ''
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Сделки');
+  const monthLabel = (!m || m === 'all') ? 'все' : m;
+  XLSX.writeFile(wb, `сделки_${monthLabel}.xlsx`);
 }
 
 function renderAllSales() {
@@ -1736,6 +1806,95 @@ async function markReimbursed(idx) {
   renderBossMetrics();
 }
 
+function showStaleDeals() {
+  const STALE_DAYS = 14;
+  const deals = db.sales.filter(s => (s.status === 'В работе' || s.status === 'Аванс получен') && s.ts && (Date.now() - s.ts) > STALE_DAYS * 86400000);
+  deals.sort((a,b) => (a.ts||0) - (b.ts||0));
+  document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = '⚠️ Зависшие сделки';
+  const el = document.getElementById('open-deals-content');
+  if (!deals.length) {
+    el.innerHTML = '<div class="empty">Зависших сделок нет ✅</div>';
+  } else {
+    el.innerHTML = `<div style="font-size:12px;color:#c0392b;margin-bottom:10px;padding:8px;background:#fdeaea;border-radius:8px">⚠️ Эти сделки в работе больше ${STALE_DAYS} дней без изменения статуса — стоит уточнить у менеджера</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th style="width:50px">Дата</th>
+        <th style="width:35px">Комп.</th>
+        <th style="width:65px">Менеджер</th>
+        <th style="width:90px">Клиент</th>
+        <th style="width:90px">Техника</th>
+        <th style="width:65px">Маржа</th>
+        <th style="width:60px">Дней</th>
+        <th style="width:30px"></th>
+      </tr></thead><tbody>` +
+    deals.map(s => {
+      const idx = db.sales.indexOf(s);
+      const mgr = mgrById(s.mgr);
+      const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+      const days = Math.floor((Date.now() - s.ts) / 86400000);
+      return `<tr style="background:#fff9f9">
+        <td>${fmtDate(s.date)}</td>
+        <td>${cBadge}</td>
+        <td>${mgr ? mgr.name : s.mgr}</td>
+        <td>${s.client||'—'}</td>
+        <td>${s.tech||'—'}</td>
+        <td>₽${fmt(s.margin||0)}</td>
+        <td style="color:#c0392b;font-weight:600">${days}</td>
+        <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+      </tr>`;
+    }).join('') + '</tbody></table></div>';
+  }
+  document.getElementById('open-deals-modal').classList.add('on');
+}
+
+function showInvestorDeals() {
+  const deals = db.sales.filter(s => Number(s.investorShare||0) > 0 && !s.investorPaid);
+  deals.sort((a,b) => (saleDate(b)||'').localeCompare(saleDate(a)||''));
+  document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'К выплате инвестору';
+  const el = document.getElementById('open-deals-content');
+  if (!deals.length) {
+    el.innerHTML = '<div class="empty">Выплачивать инвестору нечего ✅</div>';
+  } else {
+    const total = deals.reduce((s,x) => s + Number(x.investorShare||0), 0);
+    el.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:10px">Всего: ${deals.length} записей, ₽${fmt(total)}</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th style="width:50px">Дата</th>
+        <th style="width:35px">Комп.</th>
+        <th style="width:65px">Менеджер</th>
+        <th style="width:90px">Клиент</th>
+        <th style="width:90px">Техника</th>
+        <th style="width:65px">Сумма</th>
+        <th style="width:80px"></th>
+      </tr></thead>
+      <tbody>` +
+      deals.map(s => {
+        const idx = db.sales.indexOf(s);
+        const mgr = mgrById(s.mgr);
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        return `<tr>
+          <td>${fmtDate(saleDate(s))}</td>
+          <td>${cBadge}</td>
+          <td>${mgr ? mgr.name : s.mgr}</td>
+          <td>${s.client||'—'}</td>
+          <td>${s.tech||'—'}</td>
+          <td>₽${fmt(s.investorShare||0)}</td>
+          <td><button class="btn" style="font-size:11px;padding:4px 8px" onclick="markInvestorPaid(${idx})">Выплачено</button></td>
+        </tr>`;
+      }).join('') +
+    '</tbody></table></div>';
+  }
+  document.getElementById('open-deals-modal').classList.add('on');
+}
+
+async function markInvestorPaid(idx) {
+  if (!db.sales[idx]) return;
+  db.sales[idx].investorPaid = true;
+  await saveDB();
+  showInvestorDeals();
+  renderBossMetrics();
+}
+
 function showOpenDeals() {
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'Текущие сделки';
   const deals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен');
@@ -1804,6 +1963,8 @@ function openEditModal(idx) {
   document.getElementById('e-expense-desc').value = s.expenseDesc || '';
   document.getElementById('e-reimburse').value = s.reimburse || 0;
   document.getElementById('e-reimbursed').checked = !!s.reimbursed;
+  document.getElementById('e-investor-share').value = s.investorShare || 0;
+  document.getElementById('e-investor-paid').checked = !!s.investorPaid;
   document.getElementById('e-bonus').value = s.bonus || 0;
   document.getElementById('e-bonus-comm').value = s.bonusComm || '';
   document.getElementById('e-comm').value = s.comm || '';
@@ -1842,6 +2003,8 @@ async function saveEditSale() {
     expenseDesc: document.getElementById('e-expense-desc').value || '',
     reimburse: Number(document.getElementById('e-reimburse').value || 0),
     reimbursed: document.getElementById('e-reimbursed').checked,
+    investorShare: Number(document.getElementById('e-investor-share').value || 0),
+    investorPaid: document.getElementById('e-investor-paid').checked,
     bonus: document.getElementById('e-status').value === 'Закрыта' ? Number(document.getElementById('e-bonus').value || 0) : 0,
     bonusComm: document.getElementById('e-status').value === 'Закрыта' ? (document.getElementById('e-bonus-comm').value || '') : '',
     comm: document.getElementById('e-comm').value || ''
