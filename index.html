@@ -133,6 +133,14 @@ tr:last-child td{border-bottom:none}
   </div>
 
   <div id="t-day" class="screen on">
+    <div class="card" id="my-calls-card" style="display:none">
+      <div class="sh">📞 Звонки на сегодня</div>
+      <div id="my-calls"></div>
+    </div>
+    <div class="card" id="my-nocall-card" style="display:none">
+      <div class="sh" style="color:#c0392b">⚠️ Без даты следующего звонка</div>
+      <div id="my-nocall"></div>
+    </div>
     <div class="card">
       <div class="sh">Заполнить за сегодня</div>
       <div style="font-size:11px;color:#666;margin-bottom:10px" id="daily-date-label"></div>
@@ -180,6 +188,8 @@ tr:last-child td{border-bottom:none}
         <div class="fl"><label>Клиент (компания/ИП)</label><input type="text" id="s-client" placeholder="ООО / ИП / ФИО"></div>
         <div class="fl"><label>Имя контакта</label><input type="text" id="s-contact-name" placeholder="Имя менеджера/владельца"></div>
         <div class="fl"><label>Телефон</label><input type="text" id="s-contact-phone" placeholder="+7..."></div>
+        <div class="fl"><label>Дата последнего контакта</label><input type="date" id="s-last-contact"></div>
+        <div class="fl"><label>Дата следующего звонка</label><input type="date" id="s-next-call"></div>
       </div>
       <div style="font-size:11px;color:#888;margin:12px 0 8px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Техника и сделка</div>
       <div class="fgrid" style="margin-bottom:0">
@@ -247,6 +257,10 @@ tr:last-child td{border-bottom:none}
 
   <div id="b-main" class="screen on">
     <div class="metrics" id="boss-metrics"></div>
+    <div class="card" id="boss-calls-card" style="display:none">
+      <div class="sh">📞 Звонки на сегодня и просроченные</div>
+      <div id="boss-calls"></div>
+    </div>
     <div class="card">
       <div class="sh">Объявлений на Авито сегодня</div>
       <div id="boss-ads-today"></div>
@@ -387,6 +401,8 @@ tr:last-child td{border-bottom:none}
       <div class="fl"><label>Клиент</label><input type="text" id="e-client" placeholder="ООО / ИП / ФИО"></div>
       <div class="fl"><label>Имя контакта</label><input type="text" id="e-contact-name" placeholder="Имя менеджера/владельца"></div>
       <div class="fl"><label>Телефон</label><input type="text" id="e-contact-phone" placeholder="+7..."></div>
+      <div class="fl"><label>Дата последнего контакта</label><input type="date" id="e-last-contact"></div>
+      <div class="fl"><label>Дата следующего звонка</label><input type="date" id="e-next-call"></div>
       <div class="fl span2"><label>Техника</label><input type="text" id="e-tech" placeholder="Марка, модель"></div>
       <div class="fl"><label>Тип оплаты</label><select id="e-type" onchange="toggleAVFieldsEdit()"><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select></div>
       <div class="fl"><label>Сумма сделки, ₽</label><input type="number" min="0" step="1000" id="e-sum" placeholder="0" oninput="calcMarginAutoEdit()"></div>
@@ -710,7 +726,50 @@ function buildMgr(id) {
   renderDayHistory(id);
   renderMyMetrics(id);
   renderMySales(id);
+  renderMyCalls(id);
+  renderMyNoCall(id);
   renderStat(id);
+}
+
+function renderMyCalls(id) {
+  const card = document.getElementById('my-calls-card');
+  const el = document.getElementById('my-calls');
+  if (!card || !el) return;
+  const t = today();
+  const calls = db.sales.filter(s => s.mgr === id && s.nextCall && s.status !== 'Отменена' && s.nextCall <= t);
+  calls.sort((a,b) => (a.nextCall||'').localeCompare(b.nextCall||''));
+  if (!calls.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  el.innerHTML = calls.map(s => {
+    const idx = db.sales.indexOf(s);
+    const overdue = s.nextCall < t;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">
+      <div>
+        <div style="font-size:13px;font-weight:500">${s.client || s.tech || 'Без названия'}</div>
+        <div style="font-size:11px;color:${overdue ? '#c0392b' : '#666'}">${overdue ? 'Просрочено · ' : ''}${fmtDate(s.nextCall)}${s.contactPhone ? ' · ' + s.contactPhone : ''}</div>
+      </div>
+      <button class="btn-edit" onclick="openEditModal(${idx})">✏️</button>
+    </div>`;
+  }).join('');
+}
+
+function renderMyNoCall(id) {
+  const card = document.getElementById('my-nocall-card');
+  const el = document.getElementById('my-nocall');
+  if (!card || !el) return;
+  const deals = db.sales.filter(s => s.mgr === id && (s.status === 'В работе' || s.status === 'Аванс получен') && !s.nextCall);
+  if (!deals.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  el.innerHTML = deals.map(s => {
+    const idx = db.sales.indexOf(s);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">
+      <div>
+        <div style="font-size:13px;font-weight:500">${s.client || s.tech || 'Без названия'}</div>
+        <div style="font-size:11px;color:#c0392b">Нет даты следующего звонка</div>
+      </div>
+      <button class="btn-edit" onclick="openEditModal(${idx})">✏️</button>
+    </div>`;
+  }).join('');
 }
 
 function mgrTab(t, btn) {
@@ -838,6 +897,8 @@ async function saveSale() {
     client: document.getElementById('s-client').value,
     contactName: document.getElementById('s-contact-name').value || '',
     contactPhone: document.getElementById('s-contact-phone').value || '',
+    lastContact: document.getElementById('s-last-contact').value || '',
+    nextCall: document.getElementById('s-next-call').value || '',
     tech: document.getElementById('s-tech').value,
     sum: Number(document.getElementById('s-sum').value || 0),
     purchase: Number(document.getElementById('s-purchase').value || 0),
@@ -859,7 +920,7 @@ async function saveSale() {
   const ok = document.getElementById('sale-ok');
   ok.style.display = 'block';
   setTimeout(() => ok.style.display = 'none', 3000);
-  ['s-company','s-client','s-contact-name','s-contact-phone','s-tech','s-sum','s-margin','s-purchase','s-expense','s-expense-desc','s-reimburse','s-investor-share','s-bonus','s-bonus-comm','s-comm','s-ship-date'].forEach(f => {
+  ['s-company','s-client','s-contact-name','s-contact-phone','s-last-contact','s-next-call','s-tech','s-sum','s-margin','s-purchase','s-expense','s-expense-desc','s-reimburse','s-investor-share','s-bonus','s-bonus-comm','s-comm','s-ship-date'].forEach(f => {
     const el = document.getElementById(f); if (el) el.value = '';
   });
   renderMySales(id);
@@ -1000,6 +1061,7 @@ function renderStat(id) {
 function buildBoss() {
   buildMonthFilter();
   renderBossMetrics();
+  renderBossCalls();
   renderBossAdsToday();
   renderPlansForm();
   renderBossRanking();
@@ -1048,6 +1110,7 @@ function renderBossMetrics() {
   const asCnt = asClosed.length;
   const totalOpenDeals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен').length;
   const noShipDate = db.sales.filter(s => s.status === 'Закрыта' && !s.shipDate);
+  const noNextCall = db.sales.filter(s => (s.status === 'В работе' || s.status === 'Аванс получен') && !s.nextCall);
   const STALE_DAYS = 14;
   const staleDeals = db.sales.filter(s => (s.status === 'В работе' || s.status === 'Аванс получен') && s.ts && (Date.now() - s.ts) > STALE_DAYS * 86400000);
   // Возврат личных денег менеджерам — не привязан к месяцу, это долг компании до момента выплаты
@@ -1060,6 +1123,7 @@ function renderBossMetrics() {
     <div class="m" onclick="showMarginDeals(null)" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">${totalCnt}</div><div class="m-l">Продаж закрыто</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     <div class="m" onclick="showOpenDeals()" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">${totalOpenDeals}</div><div class="m-l">Текущих сделок</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     ${noShipDate.length > 0 ? `<div class="m" onclick="showNoShipDate()" style="cursor:pointer;border:2px solid #e74c3c;border-radius:10px;background:#fdeaea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#c0392b">${noShipDate.length}</div><div class="m-l" style="color:#c0392b">⚠️ Без отгрузки</div><div class="m-s" style="color:#c0392b">закрытые сделки</div></div>` : ''}
+    ${noNextCall.length > 0 ? `<div class="m" onclick="showNoCallDeals()" style="cursor:pointer;border:2px solid #e74c3c;border-radius:10px;background:#fdeaea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#c0392b">${noNextCall.length}</div><div class="m-l" style="color:#c0392b">⚠️ Без даты звонка</div><div class="m-s" style="color:#c0392b">сделки в работе · ↗ нажмите</div></div>` : ''}
     ${staleDeals.length > 0 ? `<div class="m" onclick="showStaleDeals()" style="cursor:pointer;border:2px solid #e74c3c;border-radius:10px;background:#fdeaea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#c0392b">${staleDeals.length}</div><div class="m-l" style="color:#c0392b">⚠️ Зависшие сделки</div><div class="m-s" style="color:#c0392b">без движения >${STALE_DAYS} дн. · ↗ нажмите</div></div>` : ''}
     <div class="m" onclick="showMarginDeals(null)" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа (всего)</div><div class="m-s" style="color:#378ADD">${marginPct !== null ? 'план '+marginPct+'% · ' : ''}↗ нажмите</div></div>
     <div class="m" onclick="showMarginDeals('БМ')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bmMarg)}</div><div class="m-l">Маржа БМ</div><div class="m-s" style="color:#378ADD">${bmCnt} прод. · ↗ нажмите</div></div>
@@ -1071,6 +1135,29 @@ function renderBossMetrics() {
     ${reimburseTotal > 0 ? `<div class="m" onclick="showReimburseDeals()" style="cursor:pointer;border:2px solid #f0a500;border-radius:10px;background:#fff8ea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#b8860b">₽${fmt(reimburseTotal)}</div><div class="m-l" style="color:#b8860b">К возврату менеджерам</div><div class="m-s" style="color:#b8860b">${reimburseDeals.length} записей · ↗ нажмите</div></div>` : ''}
     ${investorTotal > 0 ? `<div class="m" onclick="showInvestorDeals()" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(investorTotal)}</div><div class="m-l">Доля инвестора</div><div class="m-s" style="color:#378ADD">${investorDeals.length} сделок · ↗ нажмите</div></div>` : ''}
   `;
+}
+
+function renderBossCalls() {
+  const card = document.getElementById('boss-calls-card');
+  const el = document.getElementById('boss-calls');
+  if (!card || !el) return;
+  const t = today();
+  const calls = db.sales.filter(s => s.nextCall && s.status !== 'Отменена' && s.nextCall <= t);
+  calls.sort((a,b) => (a.nextCall||'').localeCompare(b.nextCall||''));
+  if (!calls.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  el.innerHTML = calls.map(s => {
+    const idx = db.sales.indexOf(s);
+    const mgr = mgrById(s.mgr);
+    const overdue = s.nextCall < t;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">
+      <div>
+        <div style="font-size:13px;font-weight:500">${mgr ? mgr.name : s.mgr} — ${s.client || s.tech || 'Без названия'}</div>
+        <div style="font-size:11px;color:${overdue ? '#c0392b' : '#666'}">${overdue ? 'Просрочено · ' : ''}${fmtDate(s.nextCall)}${s.contactPhone ? ' · ' + s.contactPhone : ''}</div>
+      </div>
+      <button class="btn-edit" onclick="openEditModal(${idx})">✏️</button>
+    </div>`;
+  }).join('');
 }
 
 function renderBossAdsToday() {
@@ -1327,6 +1414,8 @@ function exportSalesToExcel() {
       'Возврат менеджеру': s.reimburse || 0,
       'Возврат выплачен': Number(s.reimburse||0) > 0 ? (s.reimbursed ? 'да' : 'нет') : '',
       'Доля инвестора': s.investorShare || 0,
+      'Последний контакт': s.lastContact || '',
+      'Следующий звонок': s.nextCall || '',
       'Комментарий': s.comm || ''
     };
   });
@@ -1885,6 +1974,43 @@ function showInvestorDeals() {
   document.getElementById('open-deals-modal').classList.add('on');
 }
 
+function showNoCallDeals() {
+  const deals = db.sales.filter(s => (s.status === 'В работе' || s.status === 'Аванс получен') && !s.nextCall);
+  deals.sort((a,b) => (a.ts||0) - (b.ts||0));
+  document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = '⚠️ Сделки без даты следующего звонка';
+  const el = document.getElementById('open-deals-content');
+  if (!deals.length) {
+    el.innerHTML = '<div class="empty">У всех открытых сделок стоит дата звонка ✅</div>';
+  } else {
+    el.innerHTML = `<div style="font-size:12px;color:#c0392b;margin-bottom:10px;padding:8px;background:#fdeaea;border-radius:8px">⚠️ Без даты следующего звонка сделка не попадёт в напоминания</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th style="width:50px">Дата</th>
+        <th style="width:35px">Комп.</th>
+        <th style="width:65px">Менеджер</th>
+        <th style="width:90px">Клиент</th>
+        <th style="width:90px">Техника</th>
+        <th style="width:65px">Статус</th>
+        <th style="width:30px"></th>
+      </tr></thead><tbody>` +
+    deals.map(s => {
+      const idx = db.sales.indexOf(s);
+      const mgr = mgrById(s.mgr);
+      const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+      return `<tr style="background:#fff9f9">
+        <td>${fmtDate(s.date)}</td>
+        <td>${cBadge}</td>
+        <td>${mgr ? mgr.name : s.mgr}</td>
+        <td>${s.client||'—'}</td>
+        <td>${s.tech||'—'}</td>
+        <td><span class="badge ba">${s.status}</span></td>
+        <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+      </tr>`;
+    }).join('') + '</tbody></table></div>';
+  }
+  document.getElementById('open-deals-modal').classList.add('on');
+}
+
 function showOpenDeals() {
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'Текущие сделки';
   const deals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен');
@@ -1942,6 +2068,8 @@ function openEditModal(idx) {
   document.getElementById('e-client').value = s.client || '';
   document.getElementById('e-contact-name').value = s.contactName || '';
   document.getElementById('e-contact-phone').value = s.contactPhone || '';
+  document.getElementById('e-last-contact').value = s.lastContact || '';
+  document.getElementById('e-next-call').value = s.nextCall || '';
   document.getElementById('e-tech').value = s.tech || '';
   document.getElementById('e-sum').value = s.sum || 0;
   document.getElementById('e-margin').value = s.margin || 0;
@@ -1982,6 +2110,8 @@ async function saveEditSale() {
     client: document.getElementById('e-client').value,
     contactName: document.getElementById('e-contact-name').value || '',
     contactPhone: document.getElementById('e-contact-phone').value || '',
+    lastContact: document.getElementById('e-last-contact').value || '',
+    nextCall: document.getElementById('e-next-call').value || '',
     tech: document.getElementById('e-tech').value,
     sum: Number(document.getElementById('e-sum').value || 0),
     margin: Number(document.getElementById('e-margin').value || 0),
@@ -2005,6 +2135,7 @@ async function saveEditSale() {
     closeEditModal();
     renderMySales(currentUser);
     renderMyMetrics(currentUser);
+    if (currentUser !== 'boss') { renderMyCalls(currentUser); renderMyNoCall(currentUser); }
     if (currentUser === 'boss') buildBoss();
   }, 1500);
 }
@@ -2102,6 +2233,7 @@ async function init() {
     await loadDB();
     if (currentUser === 'boss') {
       renderBossMetrics();
+      renderBossCalls();
       renderBossAdsToday();
       renderBossRanking();
       renderBossInsights();
@@ -2112,6 +2244,8 @@ async function init() {
     } else {
       renderMyMetrics(currentUser);
       renderDayHistory(currentUser);
+      renderMyCalls(currentUser);
+      renderMyNoCall(currentUser);
     }
   }, 30000);
 }
