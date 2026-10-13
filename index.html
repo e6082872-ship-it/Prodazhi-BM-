@@ -184,7 +184,7 @@ tr:last-child td{border-bottom:none}
       <div class="sh">Добавить продажу</div>
       <div style="font-size:11px;color:#888;margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Клиент</div>
       <div class="fgrid" style="margin-bottom:0">
-        <div class="fl"><label>Компания (БМ / АС)</label><select id="s-company"><option>БМ</option><option>АС</option></select></div>
+        <div class="fl"><label>Компания (КТ / АС)</label><select id="s-company"><option>КТ</option><option>АС</option></select></div>
         <div class="fl"><label>Клиент (компания/ИП)</label><input type="text" id="s-client" placeholder="ООО / ИП / ФИО"></div>
         <div class="fl"><label>Имя контакта</label><input type="text" id="s-contact-name" placeholder="Имя менеджера/владельца"></div>
         <div class="fl"><label>Телефон</label><input type="text" id="s-contact-phone" placeholder="+7..."></div>
@@ -284,7 +284,7 @@ tr:last-child td{border-bottom:none}
     <div class="card">
       <div class="sh">Все продажи</div>
       <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-        <select id="filter-company" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">БМ + АС</option><option>БМ</option><option>АС</option></select>
+        <select id="filter-company" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">КТ + АС</option><option>КТ</option><option>АС</option></select>
         <select id="filter-mgr" onchange="renderAllSales()" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Все менеджеры</option></select>
         <div style="position:relative;display:inline-block" id="type-filter-wrap">
           <button onclick="toggleTypeFilter(event)" id="type-filter-btn" style="font-size:12px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:4px"><span id="type-filter-label">Любой тип</span> <span style="font-size:9px">▾</span></button>
@@ -367,7 +367,7 @@ tr:last-child td{border-bottom:none}
       <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
         <input type="text" id="client-search-tech" placeholder="Поиск по технике..." oninput="renderClientSearch()" style="flex:1;min-width:160px;font-size:13px;padding:8px 10px;border:1px solid #ddd;border-radius:8px">
         <select id="client-search-mgr" onchange="renderClientSearch()" style="font-size:12px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">Все менеджеры</option></select>
-        <select id="client-search-company" onchange="renderClientSearch()" style="font-size:12px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">БМ + АС</option><option>БМ</option><option>АС</option></select>
+        <select id="client-search-company" onchange="renderClientSearch()" style="font-size:12px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fff"><option value="">КТ + АС</option><option>КТ</option><option>АС</option></select>
       </div>
       <div id="client-search-results"></div>
     </div>
@@ -396,7 +396,7 @@ tr:last-child td{border-bottom:none}
       <button class="modal-close" onclick="closeEditModal()">×</button>
     </div>
     <div class="fgrid">
-      <div class="fl"><label>Компания</label><select id="e-company"><option>БМ</option><option>АС</option></select></div>
+      <div class="fl"><label>Компания</label><select id="e-company"><option>КТ</option><option>АС</option></select></div>
       <div class="fl"><label>Дата сделки</label><input type="date" id="e-date"></div>
       <div class="fl"><label>Клиент</label><input type="text" id="e-client" placeholder="ООО / ИП / ФИО"></div>
       <div class="fl"><label>Имя контакта</label><input type="text" id="e-contact-name" placeholder="Имя менеджера/владельца"></div>
@@ -452,6 +452,10 @@ async function loadDB() {
     if (!db.sales) db.sales = [];
     if (!db.activity) db.activity = [];
     if (!db.plans) db.plans = {};
+    // Миграция: компания БМ переименована в КТ
+    let renamed = false;
+    db.sales.forEach(s => { if (s.company === 'БМ') { s.company = 'КТ'; renamed = true; } });
+    if (renamed) saveDB();
     return true;
   } catch(e) {
     return false;
@@ -876,7 +880,7 @@ function renderMySales(id) {
     const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
     const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : s.type === 'АВ' ? 'ba' : '';
     const bonusCell = s.status === 'Закрыта' && s.bonus > 0 ? `<span class="badge bg">+₽${fmt(s.bonus)}${s.bonusComm?' · '+s.bonusComm:''}</span>` : '';
-    const compBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+    const compBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
     rows += `<tr><td>${fmtDate(s.date)}</td><td>${s.shipDate ? fmtDate(s.shipDate) : (s.status==='Закрыта' ? '<span style="color:#c0392b;font-weight:500" title="Укажите дату отгрузки!">⚠️</span>' : '—')}</td><td>${compBadge}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td>₽${fmt(s.margin||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td>${bonusCell}</td><td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td></tr>`;
   });
   tb.innerHTML = rows;
@@ -959,7 +963,7 @@ function renderMyClientSearch() {
       <tbody>` +
       sales.map(s => {
         const idx = db.sales.indexOf(s);
-        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
         const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
         const contact = [s.contactName, s.contactPhone].filter(Boolean).join(' · ');
         return `<tr>
@@ -1102,7 +1106,7 @@ function renderBossMetrics() {
   const bonusFirstHalf = allClosedForBonus.filter(s => { const d = s.shipDate || s.date || ''; const day = parseInt(d.split('-')[2]||'0',10); return day >= 1 && day <= 15; }).reduce((s,x) => s + Number(x.bonus||0), 0);
   const bonusSecondHalf = allClosedForBonus.filter(s => { const d = s.shipDate || s.date || ''; const day = parseInt(d.split('-')[2]||'0',10); return day > 15; }).reduce((s,x) => s + Number(x.bonus||0), 0);
   const totalBonus = bonusFirstHalf + bonusSecondHalf;
-  const bmClosed = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && (s.company||'БМ') === 'БМ' && s.type !== 'АВ'), m);
+  const bmClosed = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && (s.company||'КТ') === 'КТ' && s.type !== 'АВ'), m);
   const asClosed = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.company === 'АС' && s.type !== 'АВ'), m);
   const bmMarg = bmClosed.reduce((s,x) => s + Number(x.margin||0), 0);
   const asMarg = asClosed.reduce((s,x) => s + Number(x.margin||0), 0);
@@ -1126,7 +1130,7 @@ function renderBossMetrics() {
     ${noNextCall.length > 0 ? `<div class="m" onclick="showNoCallDeals()" style="cursor:pointer;border:2px solid #e74c3c;border-radius:10px;background:#fdeaea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#c0392b">${noNextCall.length}</div><div class="m-l" style="color:#c0392b">⚠️ Без даты звонка</div><div class="m-s" style="color:#c0392b">сделки в работе · ↗ нажмите</div></div>` : ''}
     ${staleDeals.length > 0 ? `<div class="m" onclick="showStaleDeals()" style="cursor:pointer;border:2px solid #e74c3c;border-radius:10px;background:#fdeaea;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v" style="color:#c0392b">${staleDeals.length}</div><div class="m-l" style="color:#c0392b">⚠️ Зависшие сделки</div><div class="m-s" style="color:#c0392b">без движения >${STALE_DAYS} дн. · ↗ нажмите</div></div>` : ''}
     <div class="m" onclick="showMarginDeals(null)" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(totalMarg)}</div><div class="m-l">Маржа (всего)</div><div class="m-s" style="color:#378ADD">${marginPct !== null ? 'план '+marginPct+'% · ' : ''}↗ нажмите</div></div>
-    <div class="m" onclick="showMarginDeals('БМ')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bmMarg)}</div><div class="m-l">Маржа БМ</div><div class="m-s" style="color:#378ADD">${bmCnt} прод. · ↗ нажмите</div></div>
+    <div class="m" onclick="showMarginDeals('КТ')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(bmMarg)}</div><div class="m-l">Маржа КТ</div><div class="m-s" style="color:#378ADD">${bmCnt} прод. · ↗ нажмите</div></div>
     <div class="m" onclick="showMarginDeals('АС')" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(asMarg)}</div><div class="m-l">Маржа АС</div><div class="m-s" style="color:#378ADD">${asCnt} прод. · ↗ нажмите</div></div>
     <div class="m" onclick="showAVDeals()" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(totalMargAV)}</div><div class="m-l">АВ</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
     <div class="m" onclick="showBonusDeals(null)" style="cursor:pointer;border:1px solid #e0e0e0;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div class="m-v">₽${fmt(totalBonus)}</div><div class="m-l">Бонусы всего</div><div class="m-s" style="color:#378ADD">↗ нажмите</div></div>
@@ -1384,7 +1388,7 @@ function exportSalesToExcel() {
   const statF   = document.getElementById('filter-status').value;
   const m = currentMonth();
   let sales = filterSalesByMonth(db.sales, m);
-  if (compF) sales = sales.filter(s => (s.company||'БМ') === compF);
+  if (compF) sales = sales.filter(s => (s.company||'КТ') === compF);
   if (mgrF)  sales = sales.filter(s => s.mgr === mgrF);
   if (typeCBs.length) sales = sales.filter(s => typeCBs.includes(s.type));
   if (statF) sales = sales.filter(s => s.status === statF);
@@ -1397,7 +1401,7 @@ function exportSalesToExcel() {
     return {
       'Дата': s.date || '',
       'Отгрузка': s.shipDate || '',
-      'Компания': s.company || 'БМ',
+      'Компания': s.company || 'КТ',
       'Менеджер': mgr ? mgr.name : s.mgr,
       'Клиент': s.client || '',
       'Контакт': s.contactName || '',
@@ -1435,7 +1439,7 @@ function renderAllSales() {
   const statF   = document.getElementById('filter-status').value;
   const m = currentMonth();
   let sales = filterSalesByMonth(db.sales, m);
-  if (compF) sales = sales.filter(s => (s.company||'БМ') === compF);
+  if (compF) sales = sales.filter(s => (s.company||'КТ') === compF);
   if (mgrF)  sales = sales.filter(s => s.mgr === mgrF);
   if (typeCBs.length) sales = sales.filter(s => typeCBs.includes(s.type));
   if (statF) sales = sales.filter(s => s.status === statF);
@@ -1449,7 +1453,7 @@ function renderAllSales() {
     const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
     const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : s.type === 'АВ' ? 'ba' : '';
     const bCell = s.status === 'Закрыта' && s.bonus > 0 ? `<span class="badge bg">+₽${fmt(s.bonus)}</span>` : '';
-    const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+    const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
     return `<tr>
       <td>${fmtDate(s.date)}</td>
       <td>${s.shipDate ? fmtDate(s.shipDate) : (s.status==='Закрыта' ? '<span style="color:#c0392b;font-weight:500" title="Дата отгрузки не указана!">⚠️</span>' : '—')}</td>
@@ -1468,11 +1472,11 @@ function renderAllSales() {
   const closed = sales.filter(s => s.status === 'Закрыта');
   const totalRev  = closed.reduce((s,x) => s + Number(x.sum||0), 0);
   const totalMarg = closed.reduce((s,x) => s + Number(x.margin||0), 0);
-  const bmMarg = closed.filter(x=>(x.company||'БМ')==='БМ').reduce((s,x)=>s+Number(x.margin||0),0);
+  const bmMarg = closed.filter(x=>(x.company||'КТ')==='КТ').reduce((s,x)=>s+Number(x.margin||0),0);
   const asMarg = closed.filter(x=>x.company==='АС').reduce((s,x)=>s+Number(x.margin||0),0);
-  const bmCnt = closed.filter(x=>(x.company||'БМ')==='БМ').length;
+  const bmCnt = closed.filter(x=>(x.company||'КТ')==='КТ').length;
   const asCnt = closed.filter(x=>x.company==='АС').length;
-  tot.innerHTML = `Закрытых: ${closed.length} · Оборот: ₽${fmt(totalRev)} · Маржа: ₽${fmt(totalMarg)} &nbsp;|&nbsp; <span class="badge bb">БМ</span> ${bmCnt} прод. ₽${fmt(bmMarg)} &nbsp; <span class="badge ba">АС</span> ${asCnt} прод. ₽${fmt(asMarg)}`;
+  tot.innerHTML = `Закрытых: ${closed.length} · Оборот: ₽${fmt(totalRev)} · Маржа: ₽${fmt(totalMarg)} &nbsp;|&nbsp; <span class="badge bb">КТ</span> ${bmCnt} прод. ₽${fmt(bmMarg)} &nbsp; <span class="badge ba">АС</span> ${asCnt} прод. ₽${fmt(asMarg)}`;
 }
 
 function renderActivity() {
@@ -1573,7 +1577,7 @@ function renderClientSearch() {
   let sales = db.sales.filter(s => s.client || s.tech);
   if (techQ) sales = sales.filter(s => (s.tech||'').toLowerCase().includes(techQ));
   if (mgrF) sales = sales.filter(s => s.mgr === mgrF);
-  if (compF) sales = sales.filter(s => (s.company||'БМ') === compF);
+  if (compF) sales = sales.filter(s => (s.company||'КТ') === compF);
 
   if (!techQ) {
     resultsEl.innerHTML = '<div class="empty">Введите название техники для поиска (например "самосвал")</div>';
@@ -1603,7 +1607,7 @@ function renderClientSearch() {
       sales.map(s => {
         const idx = db.sales.indexOf(s);
         const mgr = mgrById(s.mgr);
-        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
         const sc = s.status === 'Закрыта' ? 'bg' : (s.status === 'В работе' || s.status === 'Аванс получен') ? 'ba' : 'br';
         const contact = [s.contactName, s.contactPhone].filter(Boolean).join(' · ');
         return `<tr>
@@ -1690,7 +1694,7 @@ function showNoShipDate() {
     deals.map(s => {
       const idx = db.sales.indexOf(s);
       const mgr = mgrById(s.mgr);
-      const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+      const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
       return `<tr style="background:#fff9f9">
         <td>${fmtDate(s.date)}</td>
         <td>${cBadge}</td>
@@ -1708,7 +1712,7 @@ function showNoShipDate() {
 function showMarginDeals(company) {
   const m = currentMonth();
   let deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.type !== 'АВ'), m);
-  if (company) deals = deals.filter(s => (s.company||'БМ') === company);
+  if (company) deals = deals.filter(s => (s.company||'КТ') === company);
   deals.sort((a,b) => (b.date||'').localeCompare(a.date||''));
   const title = company ? `Маржа ${company} — сделки` : 'Маржа (всего) — сделки';
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = title;
@@ -1733,7 +1737,7 @@ function showMarginDeals(company) {
       deals.map(s => {
         const idx = db.sales.indexOf(s);
         const mgr = mgrById(s.mgr);
-        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
         return `<tr>
           <td>${fmtDate(s.date)}</td>
           <td>${cBadge}</td>
@@ -1775,7 +1779,7 @@ function showAVDeals() {
       deals.map(s => {
         const idx = db.sales.indexOf(s);
         const mgr = mgrById(s.mgr);
-        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
         return `<tr>
           <td>${fmtDate(s.date)}</td>
           <td>${cBadge}</td>
@@ -1824,7 +1828,7 @@ function showBonusDeals(half) {
       deals.map(s => {
         const idx = db.sales.indexOf(s);
         const mgr = mgrById(s.mgr);
-        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
         return `<tr>
           <td>${fmtDate(s.shipDate||s.date)}</td>
           <td>${cBadge}</td>
@@ -1916,7 +1920,7 @@ function showStaleDeals() {
     deals.map(s => {
       const idx = db.sales.indexOf(s);
       const mgr = mgrById(s.mgr);
-      const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+      const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
       const days = Math.floor((Date.now() - s.ts) / 86400000);
       return `<tr style="background:#fff9f9">
         <td>${fmtDate(s.date)}</td>
@@ -1958,7 +1962,7 @@ function showInvestorDeals() {
       deals.map(s => {
         const idx = db.sales.indexOf(s);
         const mgr = mgrById(s.mgr);
-        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
         return `<tr>
           <td>${fmtDate(saleDate(s))}</td>
           <td>${cBadge}</td>
@@ -1996,7 +2000,7 @@ function showNoCallDeals() {
     deals.map(s => {
       const idx = db.sales.indexOf(s);
       const mgr = mgrById(s.mgr);
-      const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+      const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
       return `<tr style="background:#fff9f9">
         <td>${fmtDate(s.date)}</td>
         <td>${cBadge}</td>
@@ -2036,7 +2040,7 @@ function showOpenDeals() {
       deals.map(s => {
         const idx = db.sales.indexOf(s);
         const mgr = mgrById(s.mgr);
-        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">БМ</span>';
+        const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
         const sc = s.status === 'Аванс получен' ? 'ba' : 'bb';
         return `<tr>
           <td>${fmtDate(s.date)}</td>
@@ -2063,7 +2067,7 @@ function openEditModal(idx) {
   const s = db.sales[idx];
   if (!s) return;
   editIdx = idx;
-  document.getElementById('e-company').value = s.company || 'БМ';
+  document.getElementById('e-company').value = s.company || 'КТ';
   document.getElementById('e-date').value = s.date || today();
   document.getElementById('e-client').value = s.client || '';
   document.getElementById('e-contact-name').value = s.contactName || '';
