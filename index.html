@@ -363,6 +363,27 @@ tr:last-child td{border-bottom:none}
 
 </div>
 
+<!-- Boss Login Modal -->
+<div class="modal-overlay" id="boss-login-modal" onclick="if(event.target===this)closeBossLogin()" onkeydown="if(event.key==='Escape')closeBossLogin()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="boss-login-title" style="max-width:360px">
+    <form onsubmit="event.preventDefault();submitBossLogin()">
+      <div class="modal-title">
+        <span id="boss-login-title">Вход руководителя</span>
+        <button type="button" class="modal-close" aria-label="Закрыть вход руководителя" onclick="closeBossLogin()">×</button>
+      </div>
+      <div class="fl" style="margin-bottom:14px">
+        <label for="boss-pin">Код доступа</label>
+        <input type="password" id="boss-pin" inputmode="numeric" autocomplete="off" placeholder="Введите код" aria-describedby="boss-login-error" oninput="clearBossLoginError()">
+      </div>
+      <div id="boss-login-error" role="alert" style="display:none;color:#c0392b;font-size:13px;margin-bottom:12px">Неверный код. Попробуйте ещё раз.</div>
+      <div style="display:flex;gap:8px">
+        <button type="submit" class="btn btn-p">Войти</button>
+        <button type="button" class="btn" onclick="closeBossLogin()">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Open Deals Modal -->
 <div class="modal-overlay" id="open-deals-modal" onclick="if(event.target===this)closeOpenDeals()">
   <div class="modal-box" style="max-width:720px;max-height:80vh;overflow-y:auto;background:#fff;border-radius:16px;padding:20px">
@@ -725,10 +746,34 @@ function login(id) {
   else { show('s-mgr', true); buildMgr(id); }
 }
 
+let bossLoginTrigger = null;
+function clearBossLoginError() {
+  document.getElementById('boss-login-error').style.display = 'none';
+  document.getElementById('boss-pin').removeAttribute('aria-invalid');
+}
 function loginBoss() {
-  const pin = prompt('Введите PIN для входа в режим руководителя:');
-  if (pin === null) return;
-  if (pin !== BOSS_PIN) { alert('Неверный PIN'); return; }
+  bossLoginTrigger = document.activeElement;
+  document.getElementById('boss-pin').value = '';
+  clearBossLoginError();
+  document.getElementById('boss-login-modal').classList.add('on');
+  document.getElementById('boss-pin').focus();
+}
+function closeBossLogin() {
+  document.getElementById('boss-login-modal').classList.remove('on');
+  document.getElementById('boss-pin').value = '';
+  clearBossLoginError();
+  if (bossLoginTrigger) bossLoginTrigger.focus();
+}
+function submitBossLogin() {
+  const input = document.getElementById('boss-pin');
+  if (input.value.trim() !== BOSS_PIN) {
+    document.getElementById('boss-login-error').style.display = 'block';
+    input.setAttribute('aria-invalid', 'true');
+    input.focus();
+    input.select();
+    return;
+  }
+  closeBossLogin();
   login('boss');
 }
 
