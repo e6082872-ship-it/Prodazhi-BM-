@@ -33,14 +33,15 @@ function renderManagerMetricDetails(model){
   let html=`<p style="margin-bottom:10px;color:#666">${e(mgrById(model.id).name)} · ${e(period)}</p><p style="margin-bottom:12px"><strong>Итого: ${e(model.money?amount(model.total):fmt(model.total))}</strong> · ${model.records.length} ${model.activity?'дневных отчётов':'записей'}</p>`;
   if(model.allPeriods&&model.kind==='open')html+='<p style="margin-bottom:12px;color:#666">Все сделки в работе и с полученным авансом, независимо от месяца.</p>';
   if(!model.records.length)return html+'<div class="empty">Нет записей для этого показателя.</div>';
-  const td=value=>'<td style="white-space:normal;overflow-wrap:anywhere">'+e(value??'—')+'</td>';
+  const td=(value,compact=false)=>'<td style="'+(compact?'white-space:nowrap':'white-space:normal;overflow-wrap:anywhere')+'">'+e(value??'—')+'</td>';
+  html+='<p style="font-size:11px;color:#888;margin-bottom:8px">Если все столбцы не видны, прокрутите таблицу вправо →</p>';
   if(model.activity){
     html+='<div style="overflow-x:auto"><table style="table-layout:auto;min-width:620px"><thead><tr><th>Дата</th><th>Новые</th><th>Повторные</th><th>Контакты</th><th>Брони</th><th>Объявления</th><th>Комментарий</th></tr></thead><tbody>';
-    for(const a of model.records)html+='<tr>'+td(fmtDate(a.date))+td(Number(a.newc||0))+td(Number(a.rep||0))+td(Number(a.newc||0)+Number(a.rep||0))+td(Number(a.book||0))+td(Number(a.ads||0)+Number(a.upd||0))+td(a.comm||'—')+'</tr>';
+    for(const a of model.records)html+='<tr>'+td(fmtDate(a.date),true)+td(Number(a.newc||0),true)+td(Number(a.rep||0),true)+td(Number(a.newc||0)+Number(a.rep||0),true)+td(Number(a.book||0),true)+td(Number(a.ads||0)+Number(a.upd||0),true)+td(a.comm||'—')+'</tr>';
   }else{
     const extra=model.kind==='bonus'?'Бонус':model.kind==='reimburse'?'К возврату':'Маржа';
     html+='<div style="overflow-x:auto"><table style="table-layout:auto;min-width:740px"><thead><tr><th>Дата сделки</th><th>Отгрузка</th><th>Клиент</th><th>Техника</th><th>Сумма</th><th>'+extra+'</th><th>Тип</th><th>Статус</th></tr></thead><tbody>';
-    for(const s of model.records)html+='<tr>'+td(fmtDate(s.date))+td(fmtDate(s.shipDate)||'—')+td(s.client||'—')+td(s.tech||'—')+td(amount(s.sum))+td(amount(s[model.kind==='bonus'?'bonus':model.kind==='reimburse'?'reimburse':'margin']))+td(s.type||'—')+td(s.status||'—')+'</tr>';
+    for(const s of model.records)html+='<tr>'+td(fmtDate(s.date),true)+td(fmtDate(s.shipDate)||'—',true)+td(s.client||'—')+td(s.tech||'—')+td(amount(s.sum),true)+td(amount(s[model.kind==='bonus'?'bonus':model.kind==='reimburse'?'reimburse':'margin']),true)+td(s.type||'—')+td(s.status||'—')+'</tr>';
   }
   return html+'</tbody></table></div>';
 }
