@@ -19,6 +19,14 @@ s=(template if template.exists() else root/'index.html').read_text()
 s=s.replace('<div style="font-size:12px;color:#666">Выберите свой профиль</div>','<div id="login-subtitle" style="font-size:12px;color:#666">Выберите свой профиль</div>')
 s=s.replace('</style>','.metric-drilldown{width:100%;border:0;font:inherit;color:inherit;cursor:pointer}.metric-drilldown .m-l::after{content:" ↗";color:#888;font-size:11px}.metric-drilldown:hover{background:#edf2ff}.metric-drilldown:focus-visible{outline:2px solid #185FA5;outline-offset:2px}</style>')
 s=s.replace('.topbar{display:flex;', '.topbar{display:flex;flex-wrap:wrap;')
+# Code-native fleet illustration and visual identity; no business logic changes.
+hero=(root/'protection/web/brand-hero.html').read_text().replace('<!-- BM_FLEET -->',(root/'protection/web/fleet.svg').read_text())
+start=s.index('  <div style="text-align:center;padding:20px 0 16px">',s.index('<div id="s-login"'))
+end=s.index('  <div class="login-wrap"',start)
+s=s[:start]+hero+'\n'+s[end:]
+masthead='<header class="bm-masthead"><div class="bm-mark" aria-label="BM">BM</div><div class="bm-wordmark">Продажи техники<small>Самосвалы · Тягачи · Полуприцепы</small></div><div class="bm-masthead-note">РАБОЧЕЕ ПРОСТРАНСТВО КОМАНДЫ</div></header>'
+s=s.replace('<div class="app" id="app">',masthead+'\n<div class="app" id="app">',1)
+s=s.replace('</style>',(root/'protection/web/industrial-theme.css').read_text()+'\n</style>',1)
 s=s.replace('<button class="btn" onclick="logout()"', '<button class="btn" onclick="goStartScreen()" style="padding:5px 10px;font-size:11px">Профили</button>\n    <button class="btn" onclick="logout()"')
 s=re.sub(r"const DB_URL = .*?;\n",'',s)
 s=re.sub(r"const BOSS_PIN = .*?\n",'',s)

@@ -98,17 +98,162 @@ tr:last-child td{border-bottom:none}
 .btn-edit:hover{background:#f5f5f5}
 .btn-del{padding:3px 8px;font-size:10px;border-radius:6px;border:1px solid #fdd;background:#fff;cursor:pointer;color:#c0392b;font-family:inherit}
 .btn-del:hover{background:#fdeaea}
-.metric-drilldown{width:100%;border:0;font:inherit;color:inherit;cursor:pointer}.metric-drilldown .m-l::after{content:" ↗";color:#888;font-size:11px}.metric-drilldown:hover{background:#edf2ff}.metric-drilldown:focus-visible{outline:2px solid #185FA5;outline-offset:2px}</style>
+.metric-drilldown{width:100%;border:0;font:inherit;color:inherit;cursor:pointer}.metric-drilldown .m-l::after{content:" ↗";color:#888;font-size:11px}.metric-drilldown:hover{background:#edf2ff}.metric-drilldown:focus-visible{outline:2px solid #185FA5;outline-offset:2px}/* BM equipment identity. Presentation only; data and access stay in the secure bridge. */
+:root{--bm-ink:#17232e;--bm-muted:#64717e;--bm-line:#dfe5e9;--bm-orange:#e9712c;--bm-orange-soft:#fff1e7;--bm-paper:#fff;--bm-radius:16px}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;line-height:1.45;color:var(--bm-ink);background:#eef1f4;background-image:radial-gradient(ellipse at 95% 0,#e1e6eb 0,transparent 50%);min-height:100vh}
+button,input,select,textarea{font:inherit}button{-webkit-tap-highlight-color:transparent}button:disabled{cursor:wait;opacity:.65}
+.app{max-width:1280px;padding:0 28px 40px}
+.bm-masthead{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:13px;padding:24px 28px 22px}
+.bm-mark{display:grid;place-items:center;background:var(--bm-ink);color:#fff;width:52px;height:44px;border-radius:5px;font-weight:900;font-style:italic;font-size:24px;letter-spacing:-2px;position:relative;flex-shrink:0}
+.bm-mark:after{content:'';position:absolute;bottom:0;right:0;width:15px;height:5px;background:var(--bm-orange)}
+.bm-wordmark{font-size:15px;font-weight:750;letter-spacing:.01em;line-height:1.3}.bm-wordmark small{display:block;font-size:11px;letter-spacing:.15em;text-transform:uppercase;font-weight:500;color:var(--bm-muted);margin-top:3px}
+.bm-masthead-note{margin-left:auto;font-size:12px;letter-spacing:.05em;color:var(--bm-muted)}
+.fleet-hero{background:#17232e;border:1px solid #293a47;border-radius:20px;overflow:hidden;position:relative;min-height:335px;padding:38px 38px 65px;margin-bottom:30px;color:#fff;isolation:isolate;box-shadow:0 16px 36px -22px #192d45}
+.fleet-hero:before{content:'';position:absolute;inset:0;background:linear-gradient(115deg,#101d28 15%,#1b2d3b 80%);z-index:-2}
+.fleet-hero-copy{position:relative;z-index:2;max-width:410px;pointer-events:none}
+.fleet-eyebrow{display:flex;align-items:center;gap:9px;font-size:11px;letter-spacing:.16em;font-weight:650;color:#becbd4;margin-bottom:19px}.fleet-eyebrow span{width:22px;height:3px;background:#f49250}
+.fleet-hero h1{font-size:clamp(29px,3.4vw,44px);letter-spacing:-.04em;line-height:1.12;font-weight:750;margin:0 0 16px}.fleet-hero h1 em{font-style:normal;color:#ffab70}
+.fleet-hero p{font-size:14px;line-height:1.65;color:#b6c6d1}
+.fleet-art{position:absolute;width:70%;height:100%;right:-20px;top:0;z-index:-1}.fleet-art svg{width:100%;height:100%;object-fit:contain}
+.fleet-categories{position:absolute;bottom:0;left:0;right:0;display:flex;gap:0;padding:0 38px;background:#0c182261;border-top:1px solid #ffffff12;backdrop-filter:blur(8px)}
+.fleet-categories span{font-size:12px;letter-spacing:.02em;color:#d0dbe2;padding:14px 24px 14px 0;display:flex;align-items:center;gap:9px}.fleet-categories span:before{content:'';width:4px;height:4px;border:1px solid #ef965a;transform:rotate(45deg)}
+.login-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:0 0 16px}.login-section-head h2{font-size:20px;letter-spacing:-.02em;font-weight:700}.login-section-head p{font-size:14px;color:var(--bm-muted)}
+.login-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.login-wrap>form,.login-wrap>.card,.login-wrap>.loading,.login-wrap>.btn{grid-column:1/-1}.login-wrap>form{width:100%;max-width:480px!important;padding:26px;background:#fff;border:1px solid var(--bm-line);border-radius:var(--bm-radius);box-shadow:0 6px 20px #263a4a06}
+.login-wrap>.btn{justify-self:start;background:var(--bm-ink);color:#fff;border-color:var(--bm-ink);padding:12px 19px;margin-bottom:2px!important}
+.mgr-card{min-width:0;min-height:104px;padding:21px 22px;border:1px solid var(--bm-line);border-radius:var(--bm-radius);box-shadow:0 3px 8px #263a4a03;transition:transform .15s,border-color .15s,box-shadow .15s;position:relative}
+.mgr-card:hover{border-color:#eba477;transform:translateY(-2px);box-shadow:0 9px 24px #263a4a09}.mgr-card:focus-visible{outline:3px solid #e9712c;outline-offset:3px}.mgr-card:has(.role-boss){border-left:4px solid var(--bm-ink)}
+.mgr-info{min-width:0}.mgr-name{font-size:17px;font-weight:700;letter-spacing:-.015em}.mgr-sub{font-size:13px;color:var(--bm-muted);margin-top:3px;overflow-wrap:anywhere}
+.avatar{border-radius:12px;font-weight:700}.mgr-card .avatar{width:46px!important;height:46px!important;font-size:17px!important}.av-boss{background:var(--bm-ink);color:#fff}
+.role-badge{font-size:11px;padding:5px 9px;border-radius:6px;white-space:nowrap}.role-mgr{background:#edf2f5;color:#506574}.role-boss{background:#fff0e3;color:#9d4a17}
+.topbar{padding:17px 20px;border-radius:var(--bm-radius);border:1px solid var(--bm-line);box-shadow:0 3px 10px #263a4a03;gap:10px;margin-bottom:16px;border-left:4px solid var(--bm-orange)}
+.topbar-title{font-size:20px;font-weight:700;letter-spacing:-.025em;min-width:150px}.topbar .btn{font-size:12px!important;min-height:36px;padding:7px 11px!important}.topbar #mgr-uname{font-size:14px!important}
+.nav{padding:6px;border:1px solid var(--bm-line);border-radius:13px;gap:4px;overflow-x:auto;scrollbar-width:thin;margin-bottom:20px}
+.nav-btn{font-size:14px;white-space:nowrap;padding:11px 14px;min-height:43px;font-weight:550;flex:1 0 auto;color:var(--bm-muted);border-radius:8px}.nav-btn i{font-size:17px;margin-right:4px}.nav-btn:hover{background:#f4f6f8;color:var(--bm-ink)}.nav-btn.on{background:var(--bm-ink);color:#fff;box-shadow:0 2px 4px #17232e20;font-weight:650}
+.card{padding:22px;border:1px solid var(--bm-line);border-radius:var(--bm-radius);margin-bottom:16px;box-shadow:0 3px 10px #263a4a03}
+.sh{font-size:18px;letter-spacing:-.02em;font-weight:700;margin-bottom:16px}.sl{font-size:12px;font-weight:650;color:var(--bm-muted);letter-spacing:.08em;margin:18px 0 10px}
+.metrics{gap:12px;margin-bottom:18px;grid-template-columns:repeat(3,minmax(0,1fr))}.m{padding:23px 16px;background:#fff;border:1px solid var(--bm-line);border-radius:14px;min-width:0;box-shadow:0 3px 10px #263a4a03;position:relative}
+.m-v{font-size:clamp(23px,2.5vw,33px);font-weight:750;letter-spacing:-.035em;line-height:1.25;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.m-l{font-size:14px;color:#526271;margin-top:6px}.m-s{font-size:12px;color:var(--bm-muted);margin-top:3px}
+.metric-drilldown{transition:background .15s,border-color .15s,transform .15s}.metric-drilldown:hover{background:#fff8f2;border-color:#e8ac83;transform:translateY(-1px)}.metric-drilldown:focus-visible{outline:3px solid var(--bm-orange);outline-offset:2px}.metric-drilldown .m-l:after{content:'Подробнее';display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#965523;margin-top:7px}
+.mgr-grid{gap:16px}.mgr-grid>.card{min-width:0}.mgr-grid .m{padding:15px 10px;background:#f5f7f9;border-color:transparent;box-shadow:none}.mgr-grid .m-v{font-size:22px}.mgr-grid .m-l{font-size:12px}
+.month-bar{padding:13px 17px;gap:12px;border-color:var(--bm-line);margin-bottom:18px;border-radius:12px}.month-bar label{font-size:14px}.month-badge{font-size:12px;background:var(--bm-orange-soft);color:#97501d;padding:5px 9px}
+select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23526271' stroke-width='1.5'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 12px center!important;padding-right:35px!important}
+.month-bar select,#team-finance-month,#team-finance-manager{font-size:14px;padding:9px 35px 9px 12px;border:1px solid #d5dde3;border-radius:8px;background-color:#fff;font-family:inherit;min-height:40px}
+#s-team-finance>.card{display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:12px}#s-team-finance>.card label{font-size:14px;color:var(--bm-muted);min-width:84px}#s-team-finance>.card select{flex:1;max-width:none!important}
+.fgrid{gap:15px;margin-bottom:18px}.fl label{font-size:14px;color:#526271;margin-bottom:6px}.fl input,.fl select,.fl textarea{font-size:16px;min-height:44px;padding:10px 12px;border:1px solid #cfd8df;border-radius:9px;transition:border-color .15s,box-shadow .15s}.fl textarea{min-height:85px}.fl input:focus,.fl select:focus,.fl textarea:focus{border-color:var(--bm-orange);outline:0;box-shadow:0 0 0 3px #e9712c17}
+.btn{font-size:14px;font-weight:600;padding:10px 16px;min-height:42px;border-color:#d5dde3;border-radius:9px}.btn:hover{background:#edf1f4}.btn-p{background:var(--bm-orange);border-color:var(--bm-orange);color:#fff}.btn-p:hover{background:#c85b1f;border-color:#c85b1f}.btn:focus-visible,.nav-btn:focus-visible{outline:3px solid #e9712c;outline-offset:2px}
+#auth-message{font-size:14px;margin:14px 0;color:var(--bm-muted)}.login-wrap form>.btn{margin:6px 5px 4px 0}.login-wrap form>.fl{margin-bottom:14px}
+table{font-size:13px;min-width:900px;table-layout:auto}th{padding:12px 10px;font-size:11px;font-weight:650;color:#62727f;background:#f4f6f8;letter-spacing:.025em;border-bottom:1px solid #dfe5e9}td{padding:13px 10px;border-color:#e8edf1}tbody tr:hover{background:#f7f9fb}td .btn-edit{min-height:30px;min-width:34px;font-size:13px}
+.row{padding:13px;background:#f4f6f8;gap:11px;border-radius:10px}.rn{font-size:14px;font-weight:650}.rs{font-size:12px}.badge{font-size:12px;border-radius:5px;padding:3px 8px;font-weight:600}.ins{font-size:13px;padding:12px 14px;gap:9px}.ins i{font-size:18px}.empty{font-size:14px;color:var(--bm-muted);padding:28px}.loading{font-size:15px;color:var(--bm-muted)}
+.kpl{font-size:13px;width:150px}.kpv{font-size:13px;width:45px}.kpb{gap:10px;margin-bottom:10px}.kpbg{height:8px}.bv{font-size:12px}.bar-wrap{width:100px}
+.modal-overlay{background:#0e1c2bb3;backdrop-filter:blur(4px)}.modal{padding:26px;border-radius:18px;box-shadow:0 20px 80px #07132040;border:1px solid #d6dfe6}.modal-title{font-size:20px;font-weight:700;gap:14px}.modal-close{display:grid;place-items:center;min-width:36px;min-height:36px;background:#f0f3f6;border-radius:8px;color:#4b5c69}.modal-close:hover{background:#e6ebef}.modal p{font-size:14px}.modal table{font-size:13px}.modal th{font-size:11px}
+#protection-message{font-size:14px;border-radius:12px;box-shadow:0 5px 30px #17232e20;padding:16px!important;max-width:900px;margin:auto}
+.ok,.err{font-size:14px}.sync-dot.loading{padding:0;margin:0 0 0 6px}
+@media(min-width:1000px){#s-login .login-wrap>.card{padding:24px 28px}.login-wrap>.card>div:first-child{font-size:16px}.login-wrap>.card>div:first-child>div{font-size:16px!important}#s-mgr .fgrid{max-width:900px}.mgr-card{min-height:112px}}
+@media(max-width:900px){.app{padding:0 18px 30px}.bm-masthead{padding:20px 18px}.fleet-hero{min-height:310px;padding:30px 28px 65px}.fleet-art{width:75%;right:-130px;opacity:.75}.fleet-hero:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#14232f 10%,transparent 90%);z-index:-1}.fleet-hero-copy{max-width:330px}.fleet-categories{padding:0 28px}.fleet-categories span{font-size:11px;padding-right:16px}.mgr-grid{grid-template-columns:1fr}.login-wrap{grid-template-columns:1fr}.m{padding:20px 13px}}
+@media(max-width:560px){.app{padding:0 12px 24px}.bm-masthead{padding:16px 14px}.bm-mark{width:43px;height:38px;font-size:22px}.bm-wordmark{font-size:14px}.bm-wordmark small{font-size:10px}.bm-masthead-note{display:none}.fleet-hero{min-height:345px;padding:24px 22px 130px;border-radius:16px;margin-bottom:22px}.fleet-eyebrow{font-size:10px;margin-bottom:14px}.fleet-hero h1{font-size:31px;line-height:1.1;margin-bottom:12px}.fleet-hero p{font-size:12px}.fleet-art{width:105%;height:210px;top:auto;bottom:27px;right:-100px;opacity:.67}.fleet-hero:after{background:linear-gradient(180deg,#14232f 12%,transparent 85%)}.fleet-categories{padding:8px 16px;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}.fleet-categories span{font-size:10px;padding:1px 0}.login-section-head{display:block;margin-bottom:13px}.login-section-head h2{font-size:19px}.login-section-head p{font-size:13px;margin-top:3px}.mgr-card{padding:17px 15px;gap:10px;min-height:96px}.mgr-name{font-size:16px}.mgr-sub{font-size:12px}.role-badge{font-size:10px;padding:4px 6px}.login-wrap>form{padding:20px}.topbar{padding:13px 12px;gap:8px}.topbar-title{font-size:18px;min-width:calc(100% - 95px)}.topbar .btn{font-size:11px!important}.topbar .avatar{width:28px;height:28px}.nav-btn{font-size:13px;padding:10px 12px}.nav{margin-bottom:14px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.m{padding:18px 10px;border-radius:12px}.m-v{font-size:23px}.m-l{font-size:12px}.m-s{font-size:11px}.metric-drilldown .m-l:after{font-size:9px}.mgr-grid .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.card{padding:17px 14px}.sh{font-size:17px}.month-bar{flex-wrap:wrap;padding:11px;gap:7px}.month-bar label{font-size:12px}.month-bar select{min-width:145px;font-size:13px}.month-badge{font-size:10px}.fgrid{gap:12px}.fl label{font-size:12px}.fl input,.fl select,.fl textarea{padding:10px;font-size:16px}.kpl{width:120px;font-size:12px}.kpv{font-size:12px}.modal{padding:20px 16px;max-height:92vh}.modal-overlay{padding:12px}.modal-title{font-size:18px}#s-team-finance>.card{padding:11px 13px;gap:6px}#s-team-finance>.card label{min-width:78px;font-size:12px}#s-team-finance>.card select{font-size:13px}.login-wrap>.card{overflow:hidden}.mgr-card>div[style*="width:16px"]{display:none}.mgr-card .avatar{width:38px!important;height:38px!important;font-size:15px!important}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.fl{min-width:0}
+@media(min-width:561px) and (max-width:900px){.nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}.nav-btn{min-width:0}}
+@media(max-width:560px){.fleet-art{right:-15px}.nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;gap:4px}.nav-btn{font-size:12px;padding:10px 5px;min-width:0}.nav-btn i{font-size:16px;margin-right:3px}}
+@media print{.bm-masthead,.fleet-hero,.nav,.topbar .btn{display:none}.app{max-width:none;padding:0}body{background:#fff}.card,.m{box-shadow:none;break-inside:avoid}.modal-overlay{backdrop-filter:none}}
+
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+<header class="bm-masthead"><div class="bm-mark" aria-label="BM">BM</div><div class="bm-wordmark">Продажи техники<small>Самосвалы · Тягачи · Полуприцепы</small></div><div class="bm-masthead-note">РАБОЧЕЕ ПРОСТРАНСТВО КОМАНДЫ</div></header>
 <div class="app" id="app">
 
 <div id="s-login" class="screen on">
-  <div style="text-align:center;padding:20px 0 16px">
-    <div style="font-size:18px;font-weight:500;margin-bottom:4px">Дашборд продаж техники</div>
-    <div id="login-subtitle" style="font-size:12px;color:#666">Выберите свой профиль</div>
+<section class="fleet-hero" aria-labelledby="fleet-title">
+  <div class="fleet-hero-copy">
+    <div class="fleet-eyebrow"><span></span> BM · ПРОДАЖИ ТЕХНИКИ</div>
+    <h1 id="fleet-title">Большая техника.<br><em>Сильная команда.</em></h1>
+    <p>Сделки, клиенты и результаты —<br>в одном рабочем пространстве.</p>
   </div>
+  <div class="fleet-art"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" fill="none" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="bm-cab" x1="730" y1="135" x2="853" y2="340" gradientUnits="userSpaceOnUse"><stop stop-color="#F9FAFB"/><stop offset=".48" stop-color="#CDD4DB"/><stop offset="1" stop-color="#85929E"/></linearGradient>
+    <linearGradient id="bm-trailer" x1="170" y1="170" x2="600" y2="330" gradientUnits="userSpaceOnUse"><stop stop-color="#8D9AA6"/><stop offset=".5" stop-color="#53616E"/><stop offset="1" stop-color="#2B3845"/></linearGradient>
+    <linearGradient id="bm-orange" x1="210" y1="80" x2="420" y2="206" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB266"/><stop offset=".5" stop-color="#F67A2D"/><stop offset="1" stop-color="#B44D22"/></linearGradient>
+    <linearGradient id="bm-glass" x1="773" y1="165" x2="839" y2="241" gradientUnits="userSpaceOnUse"><stop stop-color="#587080"/><stop offset="1" stop-color="#132431"/></linearGradient>
+    <radialGradient id="bm-glow"><stop stop-color="#E97B3D" stop-opacity=".17"/><stop offset="1" stop-color="#E97B3D" stop-opacity="0"/></radialGradient>
+    <pattern id="bm-grid" width="42" height="42" patternUnits="userSpaceOnUse"><path d="M42 0H0V42" stroke="#7C91A0" stroke-opacity=".12"/></pattern>
+    <g id="bm-wheel"><circle r="32" fill="#101820" stroke="#53616C" stroke-width="2"/><circle r="25" stroke="#25313B" stroke-width="5"/><circle r="17" fill="#73808B"/><circle r="11" fill="#3B4A56" stroke="#B2BBC2" stroke-width="2"/><circle r="4" fill="#BBC5CE"/><g stroke="#CCD4DA" stroke-width="2"><path d="M0-9V-13M0 9V13M9 0H13M-9 0H-13M6-6L9-9M-6 6L-9 9M6 6L9 9M-6-6L-9-9"/></g></g>
+  </defs>
+  <path fill="url(#bm-grid)" d="M0 0h960v440H0z"/>
+  <ellipse cx="650" cy="230" rx="340" ry="230" fill="url(#bm-glow)"/>
+  <g stroke="#65808E" stroke-opacity=".36" stroke-width="1">
+    <path d="M118 373H931M118 368V378M931 368V378M176 395H867M176 390V400M867 390V400"/>
+    <path d="M917 92V345M912 92H922M912 345H922M122 56H608M122 51V61M608 51V61" stroke-dasharray="4 7"/>
+    <circle cx="786" cy="214" r="146" stroke-dasharray="3 11"/>
+  </g>
+  <!-- Excavator in the second plane, drawn as a technical outline. -->
+  <g stroke="#8AA1AF" stroke-width="2" opacity=".4" stroke-linejoin="round">
+    <path d="M595 151H682L708 172H590Z M608 151V103H647L661 151M614 111H642L651 141H614Z"/>
+    <path d="M665 122L705 58 762 38 813 97 805 103 755 53 716 74 683 139Z"/>
+    <path d="M812 95L830 144 858 159 867 144 841 128 820 88 M855 156L874 171 898 154 891 132 868 146Z"/>
+    <path d="M608 174H691C706 174 708 201 691 201H608C588 201 589 174 608 174Z M611 182H687C696 182 696 193 687 193H611C601 193 601 182 611 182Z"/>
+    <path d="M704 67L723 75M713 86L744 62M786 83L805 82"/>
+  </g>
+  <!-- Orange tipper behind the road train. -->
+  <g>
+    <path d="M156 96L438 82 425 192 192 207Z" fill="url(#bm-orange)" stroke="#FDAC6B" stroke-width="2"/>
+    <path d="M164 94L435 80 449 88 170 105Z" fill="#FFC28B"/>
+    <path d="M199 114L213 194M247 111L256 192M295 107L299 189M344 104L343 186M393 101L387 184" stroke="#9B4F2C" stroke-width="7"/>
+    <path d="M202 114L215 191M250 111L259 189M298 108L302 185M347 105L346 182M396 102L390 181" stroke="#FFBC85" stroke-opacity=".55" stroke-width="2"/>
+    <path d="M186 209H479V229H186Z" fill="#273644"/>
+    <path d="M439 128H481L518 168V225H434Z" fill="#D8DFE4" stroke="#A5B2BC" stroke-width="2"/>
+    <path d="M449 141H477L499 168H449Z" fill="#233B4B"/><path d="M507 173V197H490V173Z" fill="#22323D"/>
+    <g transform="translate(230 226) scale(.72)"><use href="#bm-wheel"/></g>
+    <g transform="translate(283 226) scale(.72)"><use href="#bm-wheel"/></g>
+    <g transform="translate(477 226) scale(.72)"><use href="#bm-wheel"/></g>
+  </g>
+  <ellipse cx="538" cy="350" rx="365" ry="21" fill="#080F16" opacity=".6"/>
+  <!-- Semi-trailer: raised ribs, rear frame, chassis and three axles. -->
+  <path d="M148 174L650 154 669 167V293L167 317 148 299Z" fill="url(#bm-trailer)" stroke="#99A6AF" stroke-width="1.5"/>
+  <path d="M148 174L650 154 669 167 168 190Z" fill="#B3BDC5"/>
+  <path d="M148 174V299L167 317V190Z" fill="#3D4A57"/>
+  <path d="M168 195L661 173M169 301L661 278" stroke="#C5D0D8" stroke-opacity=".7" stroke-width="3"/>
+  <g stroke="#A2AFB9" stroke-opacity=".5" stroke-width="2"><path d="M192 195V300M222 193V298M252 191V296M282 190V295M312 188V293M342 187V292M372 186V290M402 184V289M432 183V287M462 182V286M492 180V284M522 179V283M552 178V281M582 176V280M612 175V278M642 174V277"/></g>
+  <path d="M166 306L669 282V304L166 328Z" fill="#23313C" stroke="#738590"/>
+  <path d="M179 308L657 286" stroke="#F79A53" stroke-width="3"/>
+  <g fill="#FFA45A"><path d="M190 311H201V315H190ZM317 305H328V309H317ZM447 299H458V303H447ZM582 293H593V297H582Z"/></g>
+  <g stroke="#A5B4BE" stroke-width="3"><path d="M546 309V333H556M564 308V332H574"/></g>
+  <g transform="translate(229 330)"><use href="#bm-wheel"/></g>
+  <g transform="translate(303 327)"><use href="#bm-wheel"/></g>
+  <g transform="translate(377 323)"><use href="#bm-wheel"/></g>
+  <path d="M187 323Q187 288 229 288Q270 288 271 319M263 320Q264 285 303 285Q343 285 345 316M337 317Q339 282 377 282Q416 282 420 312" stroke="#1B2935" stroke-width="9"/>
+  <!-- Tractor cab, glazing, steps and front grille. -->
+  <path d="M664 305H841V321H642Z" fill="#1B2731"/>
+  <path d="M711 146L774 143 828 166 853 235V307L797 323H706V204Z" fill="url(#bm-cab)" stroke="#C6D0D8" stroke-width="2"/>
+  <path d="M711 146L774 143 828 166 766 173 702 171Z" fill="#F4F7FA"/>
+  <path d="M774 157L818 174 838 226 779 232Z" fill="url(#bm-glass)" stroke="#22343F" stroke-width="3"/>
+  <path d="M718 177H762V231H713Z" fill="url(#bm-glass)" stroke="#6F828F" stroke-width="2"/>
+  <path d="M723 180H754L720 219Z" fill="#B2C3CF" opacity=".18"/>
+  <path d="M784 164L808 175 826 221 817 222Z" fill="#A1BBCD" opacity=".18"/>
+  <path d="M772 241L849 237V288L783 300Z" fill="#F1823D"/>
+  <path d="M783 252L844 248V275L787 285Z" fill="#1A2934"/>
+  <path d="M791 257L839 254M791 265L840 261M792 273L840 268" stroke="#647785" stroke-width="2"/>
+  <path d="M779 293L851 281V302L791 317Z" fill="#273743"/>
+  <path d="M788 288L807 285V292L790 297ZM829 279L847 275V282L830 287Z" fill="#E8F3FA"/>
+  <path d="M713 241H754V289H711Z" stroke="#82919C"/><path d="M740 250H752" stroke="#324956" stroke-width="3"/>
+  <path d="M707 287H754V301H701Z" fill="#7C8B97"/><path d="M707 292H745" stroke="#D1DBE2" stroke-width="2"/>
+  <path d="M769 180H779V227H768M844 209H859V234H848" stroke="#1A2A36" stroke-width="4"/>
+  <path d="M710 152V139H738M734 144V132" stroke="#71818E" stroke-width="3"/>
+  <g transform="translate(691 327)"><use href="#bm-wheel"/></g>
+  <g transform="translate(787 329)"><use href="#bm-wheel"/></g>
+  <path d="M748 321Q750 287 787 287Q825 287 828 320" stroke="#1C2A36" stroke-width="9"/>
+  <path d="M665 306V284H691" stroke="#657987" stroke-width="4"/>
+  <path d="M120 351H896" stroke="#9CB0BF" stroke-opacity=".4"/>
+  <g fill="#9FB2BF" opacity=".65"><circle cx="121" cy="56" r="3"/><circle cx="918" cy="92" r="3"/><circle cx="932" cy="373" r="3"/></g>
+</svg>
+</div>
+  <div class="fleet-categories" aria-label="Направления продаж"><span>Самосвалы</span><span>Тягачи</span><span>Полуприцепы</span><span>Спецтехника</span></div>
+</section>
+<div class="login-section-head"><h2>Рабочий кабинет</h2><p id="login-subtitle">Выберите свой профиль</p></div>
+
   <div class="login-wrap" id="login-list">
     <div class="loading">Загрузка данных<span class="sync-dot loading"></span></div>
   </div>
