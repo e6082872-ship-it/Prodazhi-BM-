@@ -1,14 +1,15 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
 import {getAuth,setPersistence,browserLocalPersistence,browserSessionPersistence,signInWithEmailAndPassword,signOut,onAuthStateChanged,sendPasswordResetEmail,sendEmailVerification,reload} from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js';
 import * as databaseSdk from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
-import {createStore} from './store.mjs';
-import {firebaseConfig} from './config.js';
+import {createStore} from './store.mjs?v=de4133ffce03';
+import {firebaseConfig} from './config.js?v=de4133ffce03';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),database=databaseSdk.getDatabase(app);
 let onReady=()=>{},onClear=()=>{},identity=null,epoch=0,store=null,signingIn=false;
 const message = text => {const el=document.getElementById('auth-message');if(el)el.textContent=text;};
 export const getIdentity = () => identity;
 export async function read(){if(!store)throw Error('Войдите заново.');return store.read();}
 export async function save(request){if(!store)throw Error('Войдите заново.');return store.save(request);}
+export async function teamFinance(){if(!store)throw Error('Войдите заново.');return store.teamFinance();}
 export async function history(){if(!store)throw Error('Войдите заново.');return store.history();}
 export async function downloadBackup(){
  if(!store)throw Error('Войдите заново.');

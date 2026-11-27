@@ -5,7 +5,7 @@ const {initializeApp:adminInit}=adminReq('firebase-admin/app'),{getDatabase:admi
 const {initializeApp,deleteApp}=req('firebase/app'),authSdk=req('firebase/auth'),sdk=req('firebase/database');
 async function main(){
  if(!process.env.FIREBASE_DATABASE_EMULATOR_HOST)throw Error('Emulators only');
- const {makeUpdates,view}=await import('./model.mjs');
+ const {makeUpdates,view,buildTeamView}=await import('./model.mjs');
  const {createStore}=await import('./store.mjs');
  const projectId='demo-bm-protection',databaseURL='https://demo-bm-protection-default-rtdb.firebaseio.com';
  adminInit({projectId,databaseURL});const admin=adminDb();
@@ -87,7 +87,27 @@ async function main(){
  const race=n=>makeUpdates(raceState.profiles,raceState.claims,[{profile:'ilya',kind:'sales',id:'sale1',before,after:{...before,sum:before.sum+n}}],{profile:'ilya',uid:'ilya'},'race_'+n,sdk.serverTimestamp());
  const races=await Promise.allSettled([put('ilya',race(10)),put('ilya',race(20))]);assert.equal(races.filter(r=>r.status==='fulfilled').length,1);
  console.log('PASS simultaneous independent saves survive; simultaneous edits of one record reject the loser');
- await admin.ref('spark/access/ilya/enabled').set(false);await assert.rejects(()=>get('ilya','spark/profiles/ilya'));
+ const privateBefore=(await admin.ref('spark/profiles').get()).val();
+ await admin.ref('spark/teamView').set(buildTeamView(privateBefore));
+ const shared=await get('artg','spark/teamView');assert.equal(shared.enabled,true);assert.equal(shared.sales.ilya.sale1.sum,privateBefore.ilya.sales.sale1.versions[privateBefore.ilya.sales.sale1.head].payload.sum);assert.equal(shared.sales.ilya.sale1.purchase,undefined);
+ await assert.rejects(()=>get('unverified','spark/teamView'));
+ await assert.rejects(()=>get('artg','spark/profiles/ilya/sales/sale1/versions'));
+ await assert.rejects(()=>put('artg',{'spark/teamView/sales/ilya/sale1/sum':999}));
+ await assert.rejects(()=>put('artg',{'spark/teamView/enabled':false}));
+ await assert.rejects(()=>put('artg',{'spark/teamView/plans/ilya/2026-11/margin':999}));
+ console.log('PASS staff can read full shared finance but not private history or alter foreign/shared figures');
+ let active=(await admin.ref('spark').get()).val();let latest=active.profiles.ilya.sales.sale1.versions[active.profiles.ilya.sales.sale1.head].payload;
+ const sharedEdit=makeUpdates(active.profiles,active.claims,[{profile:'ilya',kind:'sales',id:'sale1',before:latest,after:{...latest,sum:latest.sum+3}}],{uid:'ilya',profile:'ilya'},'shared_edit_1',sdk.serverTimestamp());
+ await put('ilya',sharedEdit);assert.equal((await get('artg','spark/teamView/sales/ilya/sale1')).sum,latest.sum+3);
+ active=(await admin.ref('spark').get()).val();latest=active.profiles.ilya.sales.sale1.versions[active.profiles.ilya.sales.sale1.head].payload;
+ const incomplete=makeUpdates(active.profiles,active.claims,[{profile:'ilya',kind:'sales',id:'sale1',before:latest,after:{...latest,sum:latest.sum+50}}],{uid:'ilya',profile:'ilya'},'missing_shared_1',sdk.serverTimestamp());
+ for(const key of Object.keys(incomplete))if(key.startsWith('spark/teamView/'))delete incomplete[key];
+ await assert.rejects(()=>put('ilya',incomplete));assert.equal((await get('artg','spark/teamView/sales/ilya/sale1')).sum,latest.sum);
+ const deleting=makeUpdates(active.profiles,active.claims,[{profile:'ilya',kind:'sales',id:'sale1',before:latest,after:null}],{uid:'boss',profile:'boss'},'shared_delete_1',sdk.serverTimestamp());await put('boss',deleting);assert.equal(await get('artg','spark/teamView/sales/ilya/sale1'),null);
+ active=(await admin.ref('spark').get()).val();await put('boss',makeUpdates(active.profiles,active.claims,[{profile:'ilya',kind:'sales',id:'sale1',before:null,after:latest}],{uid:'boss',profile:'boss'},'shared_restore_1',sdk.serverTimestamp()));assert.equal((await get('artg','spark/teamView/sales/ilya/sale1')).sum,latest.sum);
+ const viewerStore=createStore(sdk,clients.artg,{profile:'artg',uid:'artg'});assert.equal((await viewerStore.read()).data.sales.length,2);assert.equal((await viewerStore.teamFinance()).sales.length,3);viewerStore.close();
+ console.log('PASS shared projection updates atomically, cannot go stale, and follows trash/restore');
+ await admin.ref('spark/access/ilya/enabled').set(false);await assert.rejects(()=>get('ilya','spark/profiles/ilya'));await assert.rejects(()=>get('ilya','spark/teamView'));
  console.log('PASS revoked account loses access');
  await Promise.all(apps.map(deleteApp));
 }

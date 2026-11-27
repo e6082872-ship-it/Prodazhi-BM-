@@ -4,6 +4,16 @@ import sys
 import shutil
 import hashlib
 root=Path(__file__).resolve().parents[2]
+if '--spark' in sys.argv:
+ modules={name:(root/'protection/spark'/name).read_text() for name in ['auth.js','store.mjs','model.mjs']}
+ pattern=r"from '(\./(?:store\.mjs|model\.mjs|config\.js))(?:\?v=[^']*)?'"
+ canonical={name:re.sub(pattern,r"from '\1'",text) for name,text in modules.items()}
+ revision=hashlib.sha256(''.join(canonical.values()).encode()).hexdigest()[:12]
+ for name,text in canonical.items():
+  stamped=re.sub(pattern,lambda m:"from '"+m.group(1)+"?v="+revision+"'",text)
+  (root/'protection/spark'/name).write_text(stamped)
+  (root/name).write_text(stamped)
+
 template=root/'protection/legacy/index.html'
 s=(template if template.exists() else root/'index.html').read_text()
 s=s.replace('<div style="font-size:12px;color:#666">Выберите свой профиль</div>','<div id="login-subtitle" style="font-size:12px;color:#666">Выберите свой профиль</div>')
@@ -31,6 +41,9 @@ s=s.replace("  const ok = document.getElementById('day-ok');", "  window.bmDraft
 s=s.replace('  editRecord = clone(updated);','  editRecord = clone(updated);\n  window.bmDrafts.resetDirty();')
 s=s.replace('    <div class="topbar-title">Дашборд руководителя</div>','    <div class="topbar-title">Дашборд руководителя</div><button class="btn" onclick="showProtectionHistory()">История и корзина</button>')
 s=s.replace('<span>Редактировать сделку</span>','<span>Редактировать сделку</span><button type="button" id="trash-current-sale" class="btn" onclick="trashCurrentSale()" hidden>В корзину</button>')
+team_screen='<div id="s-team-finance" class="screen"><div class="topbar"><div class="topbar-title">Обзор команды</div><span class="badge bb">Только просмотр</span><button class="btn" onclick="chooseProfile(secureAuth.getIdentity()?.profile)">Мой кабинет</button><button class="btn" onclick="goStartScreen()">Профили</button></div><div class="card"><label for="team-finance-month">Период: </label><select id="team-finance-month" onchange="renderTeamFinance()" style="max-width:250px"></select></div><div class="card"><label for="team-finance-manager">Менеджер: </label><select id="team-finance-manager" onchange="renderTeamFinance()" style="max-width:250px"><option value="">Все менеджеры</option></select></div><div id="team-finance-content"></div></div>'
+s=s.replace('<div id="s-boss" class="screen">',team_screen+'\n<div id="s-boss" class="screen">')
+s=s.replace("<button class=\"nav-btn\" onclick=\"mgrTab('clients',this)\">", "<button class=\"nav-btn\" onclick=\"openTeamFinance()\">Обзор команды</button><button class=\"nav-btn\" onclick=\"mgrTab('clients',this)\">")
 s=s.replace('<script>','''<div id="protection-message" role="status" hidden style="position:fixed;bottom:12px;left:12px;right:12px;background:#fff3d6;padding:12px;border:1px solid #d69b16;z-index:2000" onclick="this.hidden=true"></div>
 <div class="modal-overlay" id="protection-history"><div class="modal" style="max-width:900px"><div class="modal-title"><span>История изменений и корзина</span><button class="modal-close" onclick="document.getElementById('protection-history').classList.remove('on')">×</button></div><div id="protection-history-content"></div></div></div>
 <div class="modal-overlay" id="manager-metric-modal" onclick="if(event.target===this)closeManagerMetric()" onkeydown="if(event.key==='Escape')closeManagerMetric()"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="manager-metric-title" style="max-width:920px"><div class="modal-title"><span id="manager-metric-title"></span><button type="button" id="manager-metric-close" class="modal-close" aria-label="Закрыть расшифровку" onclick="closeManagerMetric()">×</button></div><div id="manager-metric-content"></div></div></div>
@@ -38,7 +51,7 @@ s=s.replace('<script>','''<div id="protection-message" role="status" hidden styl
 # Append to the same classic script so lexical db/currentUser stay shared.
 marker='\ninit();\n</script>'
 assert marker in s
-extra=(root/'protection/web/guards.js').read_text()+'\n'+(root/'protection/web/bridge.js').read_text()+'\n'+(root/'protection/web/drilldowns.js').read_text()
+extra=(root/'protection/web/guards.js').read_text()+'\n'+(root/'protection/web/bridge.js').read_text()+'\n'+(root/'protection/web/drilldowns.js').read_text()+'\n'+(root/'protection/web/team-finance.js').read_text()
 s=s.replace(marker,'\n'+extra+marker)
 # No legacy network endpoint or PIN bypass in this build.
 assert 'fetch(DB_URL' not in s and 'BOSS_PIN' not in s

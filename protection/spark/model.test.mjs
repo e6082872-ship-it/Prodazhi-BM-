@@ -72,3 +72,26 @@ test('drill-down HTML escapes buyer names and report comments',()=>{
 test('a manager cannot open another employees metric details even by invoking its handler',()=>{
  const c=protectedPage();c.context.api={getIdentity:()=>({profile:'ilya'})};c.run("secureAuth=api;currentUser='ilya';managerMetricDetails=()=>{throw Error('Foreign data must not be read');};showManagerMetric('artg','sales','2026-11');");assert.ok(c.el('protection-message').textContent.includes('Нет доступа'));
 });
+test('team finance separates sales, AV, halves of the month, company margins and all-time debts',()=>{
+ const c=protectedPage();c.run(`db.sales=[
+ {mgr:'ilya',status:'Закрыта',company:'КТ',type:'Безнал',date:'2026-11-01',sum:100,margin:30,bonus:10,investorShare:5,reimburse:20},
+ {mgr:'filip',status:'Закрыта',company:'АС',type:'Лизинг',date:'2026-10-17',shipDate:'2026-11-15',sum:200,margin:50,bonus:15,investorShare:7},
+ {mgr:'artg',status:'Закрыта',company:'КТ',type:'Безнал',date:'2026-11-16',sum:300,margin:60,bonus:20},
+ {mgr:'arts',status:'Закрыта',type:'АВ',date:'2026-11-20',sum:40,margin:40,bonus:8},
+ {mgr:'vlad',status:'Отменена',type:'Безнал',date:'2026-11-02',sum:900,margin:900,bonus:900},
+ {mgr:'felix',status:'В работе',type:'Безнал',date:'2026-10-01',ts:1000-15*86400000},
+ {mgr:'ilya',status:'Аванс получен',type:'Безнал',date:'2026-10-02',ts:1000-14*86400000},
+ {mgr:'ilya',status:'Закрыта',type:'Безнал',date:'2026-10-01',sum:999,bonus:999,reimburse:30}];`);
+ for(const [key,total]of Object.entries({revenue:600,sales:3,margin:140,marginKT:90,marginAS:50,av:40,bonus:53,bonusFirst:25,bonusSecond:28,investor:12,reimburse:50,open:2,stale:1}))assert.equal(c.run(`teamFinanceMetric(db,'${key}','2026-11',1000).total`),total,key);
+ const html=c.run("renderManagerMetricDetails(teamFinanceMetric(db,'bonusFirst','2026-11',1000))");assert.ok(html.includes('Вся команда'));assert.ok(html.includes('<th>Менеджер</th>'));assert.ok(html.includes('Филипп'));assert.ok(!html.includes('openEditModal'));
+});
+test('shared financial projection omits private contact details, purchase prices and history',()=>{
+ const state=convert({sales:[{...sale,purchase:70,contactPhone:'PRIVATE_PHONE',contactName:'PRIVATE_CONTACT',comm:'PRIVATE_COMMENT'}],activity:[],plans:{}});
+ return import('./model.mjs').then(({buildTeamView,teamFinanceData})=>{const projection=buildTeamView(state.profiles),shared=teamFinanceData(projection);assert.equal(shared.sales[0].sum,100);assert.equal(shared.sales[0].purchase,undefined);assert.equal(shared.sales[0].contactPhone,undefined);assert.equal(shared.sales[0].comm,undefined);assert.ok(!JSON.stringify(projection).includes('PRIVATE_'));assert.equal(view(state.profiles).sales[0].purchase,70);assert.throws(()=>teamFinanceData({}),/подключается/);});
+});
+test('shared review cannot be opened without a verified active identity',()=>{
+ const c=protectedPage();c.run('openTeamFinance()');assert.equal(c.run('currentUser'),null);assert.ok(c.el('protection-message').textContent.includes('войдите'));assert.ok(!c.el('login-list').innerHTML);
+});
+test('a read-only team filter limits displayed sales and plans without changing the signed-in profile',()=>{
+ const c=protectedPage();c.run("currentUser='ilya';db.sales=[{mgr:'ilya',sum:10},{mgr:'filip',sum:20}];db.plans={'ilya_2026-11':{margin:1},'filip_2026-11':{margin:2}};");const filtered=c.run("filterTeamFinance(db,'filip')");assert.equal(filtered.sales.length,1);assert.equal(filtered.sales[0].sum,20);assert.deepEqual(Object.keys(filtered.plans),['filip_2026-11']);assert.equal(c.run('currentUser'),'ilya');assert.equal(c.run('db.sales.length'),2);
+});
