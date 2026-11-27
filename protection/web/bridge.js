@@ -28,7 +28,7 @@ function goStartScreen(){
   if(saving){showProtectionMessage('Дождитесь завершения сохранения.');return;}
   if(window.bmDrafts.isDirty()&&!confirm('В форме редактирования есть несохранённые изменения. Вернуться к профилям без сохранения?'))return;
   window.bmDrafts.beforeChange();currentUser=null;selectedProfile=null;editRecord=null;
-  ['s-mgr','s-boss','edit-modal','protection-history'].forEach(id=>show(id,false));
+  ['s-mgr','s-boss','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>show(id,false));
   show('s-login',true);buildProfileLanding();
 }
 function chooseProfile(profile){
@@ -164,8 +164,8 @@ init=async function(){
     },()=>{
       secureAuthEpoch++;window.bmDrafts.beforeChange();currentUser=null;secureOperation=null;
       db={sales:[],activity:[],plans:{}};editRecord=null;dbRevision++;
-      ['s-mgr','s-boss','edit-modal','protection-history'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});
-      for(const id of ['my-sales-body','my-metrics','stat-content','day-history','my-client-search-results','boss-metrics','boss-ranking','boss-insights','all-sales-body','all-sales-total','activity-body','team-grid','client-search-results','plans-form','plans-progress','protection-history-content']) {
+      ['s-mgr','s-boss','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});
+      for(const id of ['my-sales-body','my-metrics','stat-content','day-history','my-client-search-results','boss-metrics','boss-ranking','boss-insights','all-sales-body','all-sales-total','activity-body','team-grid','client-search-results','plans-form','plans-progress','protection-history-content','manager-metric-content','open-deals-content']) {
         const el=document.getElementById(id);if(el)el.replaceChildren();
       }
       document.querySelectorAll('#edit-modal input, #edit-modal textarea').forEach(el=>{el.value='';});

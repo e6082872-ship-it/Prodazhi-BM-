@@ -9,7 +9,7 @@ test('migration refuses repeated vehicle identifiers without deleting either sal
 test('Spark page compiles and has no callable functions, legacy endpoint or PIN access',()=>{const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);assert.ok(html.includes('Скачать резервную копию'));assert.ok(!html.includes('BOSS_PIN'));const auth=fs.readFileSync(new URL('./auth.js',import.meta.url),'utf8');assert.ok(!auth.includes('httpsCallable'));assert.ok(!auth.includes('firebase-functions'));});
 function protectedPage(){
  const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8'),elements=new Map();
- const el=id=>{if(!elements.has(id))elements.set(id,{value:'',style:{},classList:{add(){},remove(){},toggle(){}},focus(){},replaceChildren(){},textContent:''});return elements.get(id);};
+ const el=id=>{if(!elements.has(id))elements.set(id,{value:'',style:{},classList:{add(){},remove(){},toggle(){}},focus(){},replaceChildren(){},querySelectorAll:()=>[],textContent:''});return elements.get(id);};
  const context=vm.createContext({document:{getElementById:el,addEventListener(){},querySelectorAll:()=>[]},window:{addEventListener(){}},sessionStorage:{getItem(){return null;},setItem(){}},crypto:{randomUUID:()=> 'test-operation-id'},setTimeout(){},setInterval(){},console,confirm:()=>true});
  vm.runInContext(html.match(/<script>([\s\S]*?)<\/script>/)[1].replace(/\ninit\(\);\s*$/,''),context);
  return {el,context,run:s=>vm.runInContext(s,context)};
@@ -45,4 +45,30 @@ test('returning to profiles preserves a remembered manager session and reopens o
 });
 test('the original financial summary is available on the authenticated owner start page',()=>{
  const c=protectedPage();c.context.api={getIdentity:()=>({profile:'boss'})};c.run('secureAuth=api;buildLogin()');assert.ok(c.el('login-list').innerHTML.includes('Команда — маржа'));assert.ok(c.el('login-list').innerHTML.includes('Руководитель'));
+});
+test('every manager drill-down reconciles to the same monthly KPIs including shipment dates, AV and bonuses',()=>{
+ const c=protectedPage();c.run(`db.sales=MANAGERS.flatMap(m=>[
+ {id:m.id+'a',mgr:m.id,status:'Закрыта',type:'Безнал',date:'2026-10-19',shipDate:'2026-11-24',sum:100,margin:30,bonus:10},
+ {id:m.id+'b',mgr:m.id,status:'Закрыта',type:'Лизинг',date:'2026-11-02',sum:200,margin:-20,bonus:5},
+ {id:m.id+'c',mgr:m.id,status:'Закрыта',type:'АВ',date:'2026-11-03',sum:40,margin:40,bonus:7},
+ {id:m.id+'d',mgr:m.id,status:'Закрыта',type:'Безнал',date:'2026-10-02',sum:900,margin:90,bonus:9},
+ {id:m.id+'e',mgr:m.id,status:'В работе',type:'Безнал',date:'2026-07-01',sum:700,margin:70},
+ {id:m.id+'f',mgr:m.id,status:'Аванс получен',type:'Безнал',date:'2026-08-01',sum:800,margin:80},
+ {id:m.id+'g',mgr:m.id,status:'Отменена',type:'Безнал',date:'2026-11-01',sum:999,margin:99}]);
+ db.activity=MANAGERS.flatMap(m=>[{mgr:m.id,date:'2026-11-01',newc:5,rep:3,book:4,ads:2,upd:1},{mgr:m.id,date:'2026-10-01',newc:100,rep:100,book:100,ads:100}]);`);
+ for(const id of ['ilya','filip','artg','arts','vlad','felix'])for(const [kind,key]of Object.entries({sales:'cnt',revenue:'rev',margin:'margin',av:'marginAV',avCount:'cntAV',bonus:'bonus',contacts:'contacts',bookings:'bookings',ads:'ads',open:'openDeals'})){
+  const detail=c.run(`managerMetricDetails(db,'${id}','${kind}','2026-11')`);assert.equal(detail.total,c.run(`calcKpd('${id}','2026-11').${key}`),id+' '+kind);assert.ok(detail.records.every(r=>r.mgr===id));
+ }
+});
+test('deal drill-downs include all contributors, rather than only the four preview sales',()=>{
+ const c=protectedPage();c.run("db.sales=Array.from({length:12},(_,i)=>({id:'s'+i,mgr:'filip',status:'Закрыта',type:'Безнал',date:'2026-11-01',sum:100,margin:10}));");const model=c.run("managerMetricDetails(db,'filip','sales','2026-11')");assert.equal(model.total,12);assert.equal(model.records.length,12);
+});
+test('empty activity is zero and unpaid reimbursements retain their all-time scope',()=>{
+ const c=protectedPage();assert.equal(c.run("managerMetricDetails(db,'ilya','days','2026-11').total"),0);c.run("db.sales=[{mgr:'ilya',date:'2026-07-01',reimburse:50,reimbursed:false},{mgr:'ilya',date:'2026-11-01',reimburse:80,reimbursed:true},{mgr:'artg',reimburse:900}]");assert.equal(c.run("managerMetricDetails(db,'ilya','reimburse','2026-11').total"),50);assert.equal(c.run("managerMetricDetails(db,'ilya','reimburse','2026-11').allPeriods"),true);
+});
+test('drill-down HTML escapes buyer names and report comments',()=>{
+ const c=protectedPage();c.run(`db.sales=[{mgr:'ilya',status:'Закрыта',type:'Безнал',date:'2026-11-01',client:'<img src=x onerror=alert(1)>',tech:'Truck',sum:100,margin:10}];db.activity=[{mgr:'ilya',date:'2026-11-01',newc:1,comm:'<script>bad()</script>'}];`);const sale=c.run("renderManagerMetricDetails(managerMetricDetails(db,'ilya','sales','2026-11'))"),report=c.run("renderManagerMetricDetails(managerMetricDetails(db,'ilya','contacts','2026-11'))");assert.ok(!sale.includes('<img'));assert.ok(sale.includes('&lt;img'));assert.ok(!report.includes('<script>'));assert.ok(report.includes('&lt;script&gt;'));
+});
+test('a manager cannot open another employees metric details even by invoking its handler',()=>{
+ const c=protectedPage();c.context.api={getIdentity:()=>({profile:'ilya'})};c.run("secureAuth=api;currentUser='ilya';managerMetricDetails=()=>{throw Error('Foreign data must not be read');};showManagerMetric('artg','sales','2026-11');");assert.ok(c.el('protection-message').textContent.includes('Нет доступа'));
 });
