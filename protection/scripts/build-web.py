@@ -2,6 +2,7 @@ from pathlib import Path
 import re
 import sys
 import shutil
+import hashlib
 root=Path(__file__).resolve().parents[2]
 template=root/'protection/legacy/index.html'
 s=(template if template.exists() else root/'index.html').read_text()
@@ -39,6 +40,8 @@ s=s.replace(marker,'\n'+extra+marker)
 assert 'fetch(DB_URL' not in s and 'BOSS_PIN' not in s
 output=root/'protection/spark' if '--spark' in sys.argv else root/'protection/web'
 if '--spark' in sys.argv:
+ revision=hashlib.sha256((root/'protection/spark/auth.js').read_bytes()).hexdigest()[:12]
+ s=s.replace("await import('./auth.js')","await import('./auth.js?v="+revision+"')")
  s=s.replace('<button class="btn" onclick="showProtectionHistory()">История и корзина</button>','<button class="btn" onclick="showProtectionHistory()">История и корзина</button><button class="btn" onclick="secureAuth.downloadBackup().catch(e=>showProtectionMessage(e.message))">Скачать резервную копию</button>')
 (output/'index.html').write_text(s)
 print('Generated protected web/index.html')

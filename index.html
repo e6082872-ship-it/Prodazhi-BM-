@@ -2352,7 +2352,7 @@ async function showProtectionHistory(){
 init=async function(){
   authForm();
   try{
-    secureAuth=await import('./auth.js');
+    secureAuth=await import('./auth.js?v=3594abcf9957');
     secureAuth.boot(result=>{
       db=normalizeDB(result.data);login(result.profile);
     },()=>{
