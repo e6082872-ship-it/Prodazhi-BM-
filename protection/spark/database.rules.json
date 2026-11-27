@@ -1,0 +1,314 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "dashboard": {
+      ".read": false,
+      ".write": false
+    },
+    "dashboard_test": {
+      ".read": false,
+      ".write": false
+    },
+    "data": {
+      ".read": true,
+      ".write": true
+    },
+    "presence": {
+      ".read": true,
+      ".write": true
+    },
+    "spark": {
+      "access": {
+        "$uid": {
+          ".read": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true && auth.uid == $uid"
+        }
+      },
+      "profiles": {
+        ".read": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true && root.child('spark/access').child(auth.uid).child('profile').val() == 'boss'",
+        "$profile": {
+          ".read": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true && (root.child('spark/access').child(auth.uid).child('profile').val() == 'boss' || root.child('spark/access').child(auth.uid).child('profile').val() == $profile)",
+          "sales": {
+            "$id": {
+              ".validate": "newData.hasChildren(['head','versions'])",
+              "head": {
+                ".write": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true && (root.child('spark/access').child(auth.uid).child('profile').val() == 'boss' || root.child('spark/access').child(auth.uid).child('profile').val() == $profile)",
+                ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val()+1 : 1) && newData.parent().child('versions').child(newData.val()+'').exists()"
+              },
+              "versions": {
+                "$version": {
+                  ".write": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true && (root.child('spark/access').child(auth.uid).child('profile').val() == 'boss' || root.child('spark/access').child(auth.uid).child('profile').val() == $profile) && !data.exists()",
+                  ".validate": "newData.hasChildren(['at','uid','op','deleted','payload']) && $version == newData.parent().parent().child('head').val()+'' && newData.child('at').val() == now && newData.child('uid').val() == auth.uid && newData.child('op').isString() && newData.child('op').val().length <= 100 && newData.child('deleted').isBoolean() && (newData.child('deleted').val() == false || root.child('spark/access').child(auth.uid).child('profile').val() == 'boss')",
+                  "at": {
+                    ".validate": "newData.isNumber()"
+                  },
+                  "uid": {
+                    ".validate": "newData.isString()"
+                  },
+                  "op": {
+                    ".validate": "newData.isString()"
+                  },
+                  "deleted": {
+                    ".validate": "newData.isBoolean()"
+                  },
+                  "$other": {
+                    ".validate": false
+                  },
+                  "payload": {
+                    ".validate": "newData.child('mgr').val() == $profile && newData.hasChildren(['id','mgr','sum','margin','type','status']) && newData.child('id').val() == $id && (newData.child('type').val() == 'АВ' || newData.child('vin').val() != null && newData.child('vin').val() != '' || newData.child('stockNo').val() != null && newData.child('stockNo').val() != '') && (newData.parent().child('deleted').val() == true || newData.child('type').val() == 'АВ' || !newData.child('vin').exists() || newData.child('vin').val() == '' || newData.parent().parent().parent().parent().parent().parent().parent().child('claims/vin').child(newData.child('vin').val()).child('profile').val() == $profile && newData.parent().parent().parent().parent().parent().parent().parent().child('claims/vin').child(newData.child('vin').val()).child('id').val() == $id) && (newData.parent().child('deleted').val() == true || newData.child('type').val() == 'АВ' || !newData.child('stockNo').exists() || newData.child('stockNo').val() == '' || newData.parent().parent().parent().parent().parent().parent().parent().child('claims/stockNo').child(newData.child('stockNo').val()).child('profile').val() == $profile && newData.parent().parent().parent().parent().parent().parent().parent().child('claims/stockNo').child(newData.child('stockNo').val()).child('id').val() == $id)",
+                    "sum": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "purchase": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "expense": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "reimburse": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "investorShare": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "bonus": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "ts": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "margin": {
+                      ".validate": "newData.isNumber()"
+                    },
+                    "id": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "mgr": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "company": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "date": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "shipDate": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "client": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "contactName": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "contactPhone": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "tech": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "expenseDesc": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "type": {
+                      ".validate": "newData.val() == 'АВ' || newData.val() == 'Безнал' || newData.val() == 'Лизинг' || newData.val() == 'Наличные'"
+                    },
+                    "status": {
+                      ".validate": "newData.val() == 'Закрыта' || newData.val() == 'В работе' || newData.val() == 'Аванс получен' || newData.val() == 'Отменена'"
+                    },
+                    "bonusComm": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "comm": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "vin": {
+                      ".validate": "newData.val() == '' || newData.isString() && newData.val().matches(/^[A-HJ-NPR-Z0-9]{17}$/)"
+                    },
+                    "stockNo": {
+                      ".validate": "newData.val() == '' || newData.isString() && newData.val().matches(/^[A-Z0-9_-]{1,80}$/)"
+                    },
+                    "lastContact": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "nextCall": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "reimbursed": {
+                      ".validate": "newData.isBoolean()"
+                    },
+                    "investorPaid": {
+                      ".validate": "newData.isBoolean()"
+                    },
+                    "$other": {
+                      ".validate": false
+                    }
+                  }
+                }
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "activity": {
+            "$id": {
+              ".validate": "newData.hasChildren(['head','versions'])",
+              "head": {
+                ".write": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true && (root.child('spark/access').child(auth.uid).child('profile').val() == 'boss' || root.child('spark/access').child(auth.uid).child('profile').val() == $profile)",
+                ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val()+1 : 1) && newData.parent().child('versions').child(newData.val()+'').exists()"
+              },
+              "versions": {
+                "$version": {
+                  ".write": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true && (root.child('spark/access').child(auth.uid).child('profile').val() == 'boss' || root.child('spark/access').child(auth.uid).child('profile').val() == $profile) && !data.exists()",
+                  ".validate": "newData.hasChildren(['at','uid','op','deleted','payload']) && $version == newData.parent().parent().child('head').val()+'' && newData.child('at').val() == now && newData.child('uid').val() == auth.uid && newData.child('op').isString() && newData.child('op').val().length <= 100 && newData.child('deleted').isBoolean() && (newData.child('deleted').val() == false || root.child('spark/access').child(auth.uid).child('profile').val() == 'boss')",
+                  "at": {
+                    ".validate": "newData.isNumber()"
+                  },
+                  "uid": {
+                    ".validate": "newData.isString()"
+                  },
+                  "op": {
+                    ".validate": "newData.isString()"
+                  },
+                  "deleted": {
+                    ".validate": "newData.isBoolean()"
+                  },
+                  "$other": {
+                    ".validate": false
+                  },
+                  "payload": {
+                    ".validate": "newData.child('mgr').val() == $profile && newData.hasChildren(['mgr','date','found','book','ads','upd','newc','rep']) && newData.child('date').val() == $id",
+                    "found": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "book": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "ads": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "upd": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "newc": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "rep": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "dial": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "la": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "lap": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "lc": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "mgr": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "date": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "comm": {
+                      ".validate": "newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"
+                    },
+                    "$other": {
+                      ".validate": false
+                    }
+                  }
+                }
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "plans": {
+            "$id": {
+              ".validate": "newData.hasChildren(['head','versions'])",
+              "head": {
+                ".write": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true && root.child('spark/access').child(auth.uid).child('profile').val() == 'boss'",
+                ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val()+1 : 1) && newData.parent().child('versions').child(newData.val()+'').exists()"
+              },
+              "versions": {
+                "$version": {
+                  ".write": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true && root.child('spark/access').child(auth.uid).child('profile').val() == 'boss' && !data.exists()",
+                  ".validate": "newData.hasChildren(['at','uid','op','deleted','payload']) && $version == newData.parent().parent().child('head').val()+'' && newData.child('at').val() == now && newData.child('uid').val() == auth.uid && newData.child('op').isString() && newData.child('op').val().length <= 100 && newData.child('deleted').isBoolean() && (newData.child('deleted').val() == false || root.child('spark/access').child(auth.uid).child('profile').val() == 'boss')",
+                  "at": {
+                    ".validate": "newData.isNumber()"
+                  },
+                  "uid": {
+                    ".validate": "newData.isString()"
+                  },
+                  "op": {
+                    ".validate": "newData.isString()"
+                  },
+                  "deleted": {
+                    ".validate": "newData.isBoolean()"
+                  },
+                  "$other": {
+                    ".validate": false
+                  },
+                  "payload": {
+                    ".validate": "newData.hasChildren(['margin','av'])",
+                    "margin": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "av": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0"
+                    },
+                    "$other": {
+                      ".validate": false
+                    }
+                  }
+                }
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        }
+      },
+      "claims": {
+        ".read": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true",
+        "vin": {
+          "$key": {
+            ".write": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true && !data.exists()",
+            ".validate": "newData.hasChildren(['profile','id']) && (root.child('spark/access').child(auth.uid).child('profile').val() == 'boss' || newData.child('profile').val() == root.child('spark/access').child(auth.uid).child('profile').val()) && newData.parent().parent().parent().child('profiles').child(newData.child('profile').val()).child('sales').child(newData.child('id').val()).child('versions').child(newData.parent().parent().parent().child('profiles').child(newData.child('profile').val()).child('sales').child(newData.child('id').val()).child('head').val()+'').child('payload').child('vin').val() == $key",
+            "profile": {
+              ".validate": "newData.isString()"
+            },
+            "id": {
+              ".validate": "newData.isString()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "stockNo": {
+          "$key": {
+            ".write": "auth != null && auth.token.email_verified == true && root.child('spark/access').child(auth.uid).child('enabled').val() == true && !data.exists()",
+            ".validate": "newData.hasChildren(['profile','id']) && (root.child('spark/access').child(auth.uid).child('profile').val() == 'boss' || newData.child('profile').val() == root.child('spark/access').child(auth.uid).child('profile').val()) && newData.parent().parent().parent().child('profiles').child(newData.child('profile').val()).child('sales').child(newData.child('id').val()).child('versions').child(newData.parent().parent().parent().child('profiles').child(newData.child('profile').val()).child('sales').child(newData.child('id').val()).child('head').val()+'').child('payload').child('stockNo').val() == $key",
+            "profile": {
+              ".validate": "newData.isString()"
+            },
+            "id": {
+              ".validate": "newData.isString()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

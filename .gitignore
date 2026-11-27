@@ -1,0 +1,9 @@
+node_modules/
+.firebase/
+*-debug.log
+backups/
+protection/access.private.json
+protection/migration.private.json
+protection/web/config.js
+protection/spark/config.js
+protection/spark/migration.private.json

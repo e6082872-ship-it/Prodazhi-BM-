@@ -1,0 +1,1 @@
+{"name":"bm-dashboard-spark-protection","private":true,"version":"1.0.0","engines":{"node":">=22"},"dependencies":{"firebase-admin":"^13.0.0"},"devDependencies":{"firebase":"12.6.0","firebase-tools":"^15.0.0"},"scripts":{"test":"node --test model.test.mjs","test:rules":"firebase emulators:exec --project demo-bm-protection --only auth,database \"node emulator.integration.cjs\""}}
