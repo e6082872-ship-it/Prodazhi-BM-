@@ -883,13 +883,16 @@ function renderDayHistory(id) {
 }
 
 function renderMyMetrics(id) {
-  const k = calcKpd(id);
+  // Период менеджера не зависит от скрытого фильтра кабинета руководителя.
+  const month = today().slice(0,7);
+  const k = calcKpd(id, month);
   const m = mgrById(id);
   const planPct = m ? Math.round(k.rev / m.plan * 100) : 0;
   const el = document.getElementById('my-metrics');
   if (!el) return;
   const pendingReimburse = db.sales.filter(s => s.mgr === id && Number(s.reimburse||0) > 0 && !s.reimbursed).reduce((s,x) => s + Number(x.reimburse||0), 0);
   el.innerHTML = `
+    <div style="grid-column:1/-1;font-size:12px;color:#666">Итоги за ${new Date(month + '-01T12:00:00').toLocaleDateString('ru-RU', {month:'long', year:'numeric'})}</div>
     <div class="m"><div class="m-v">${k.cnt}</div><div class="m-l">Продаж</div></div>
     <div class="m"><div class="m-v">₽${fmt(k.rev)}</div><div class="m-l">Оборот</div><div class="m-s">план ${planPct}%</div></div>
     <div class="m"><div class="m-v">₽${fmt(k.margin)}</div><div class="m-l">Маржа</div></div>
