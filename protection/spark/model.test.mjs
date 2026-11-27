@@ -9,7 +9,7 @@ test('migration refuses repeated vehicle identifiers without deleting either sal
 test('Spark page compiles and has no callable functions, legacy endpoint or PIN access',()=>{const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);assert.ok(html.includes('Скачать резервную копию'));assert.ok(!html.includes('BOSS_PIN'));const auth=fs.readFileSync(new URL('./auth.js',import.meta.url),'utf8');assert.ok(!auth.includes('httpsCallable'));assert.ok(!auth.includes('firebase-functions'));});
 function protectedPage(){
  const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8'),elements=new Map();
- const el=id=>{if(!elements.has(id))elements.set(id,{value:'',style:{},classList:{add(){},remove(){}},focus(){},replaceChildren(){},textContent:''});return elements.get(id);};
+ const el=id=>{if(!elements.has(id))elements.set(id,{value:'',style:{},classList:{add(){},remove(){},toggle(){}},focus(){},replaceChildren(){},textContent:''});return elements.get(id);};
  const context=vm.createContext({document:{getElementById:el,addEventListener(){},querySelectorAll:()=>[]},window:{addEventListener(){}},sessionStorage:{getItem(){return null;},setItem(){}},crypto:{randomUUID:()=> 'test-operation-id'},setTimeout(){},setInterval(){},console,confirm:()=>true});
  vm.runInContext(html.match(/<script>([\s\S]*?)<\/script>/)[1].replace(/\ninit\(\);\s*$/,''),context);
  return {el,context,run:s=>vm.runInContext(s,context)};
@@ -26,4 +26,23 @@ test('protected page refuses a save under another profile',async()=>{
 test('migration verification tolerates Firebase reordering same-day activity records',()=>{
  const source={sales:[sale],activity:[{mgr:'ilya',date:'2026-11-27',found:2},{mgr:'artg',date:'2026-11-27',found:3}],plans:{}};
  const state=convert(source);const reordered=Object.fromEntries(Object.entries(state.profiles).reverse());assert.ok(equal(view(state.profiles),view(reordered)));
+});
+test('public start page shows all seven profile cards without reading cached financial metrics',()=>{
+ const c=protectedPage();c.run("calcKpd=()=>{throw Error('Public landing must not render financial data');};db.sales=[{mgr:'ilya',client:'PRIVATE_BUYER',sum:9876543}];buildLogin();");
+ const html=c.el('login-list').innerHTML;for(const name of ['Илья','Филипп','Артем Г','Артем Ш','Влад','Феликс','Руководитель'])assert.ok(html.includes(name),name);assert.equal((html.match(/class="mgr-card"/g)||[]).length,7);assert.ok(!html.includes('PRIVATE_BUYER'));assert.ok(!html.includes('9876543'));assert.equal(c.run('currentUser'),null);
+});
+test('choosing an anonymous profile opens its personal login form without opening a cabinet',()=>{
+ const c=protectedPage();c.run("chooseProfile('boss')");assert.equal(c.run('currentUser'),null);assert.equal(c.el('login-subtitle').textContent,'Вход: Руководитель');assert.ok(c.el('login-list').innerHTML.includes('auth-remember'));assert.ok(!c.el('login-list').innerHTML.includes('boss-pin'));
+});
+test('a remembered manager cannot open another manager or the boss using a public card',()=>{
+ const c=protectedPage();c.context.api={getIdentity:()=>({profile:'ilya'})};c.run("secureAuth=api;buildMgr=()=>{throw Error('Must not open another profile');};chooseProfile('artg')");assert.equal(c.run('currentUser'),null);assert.ok(c.el('auth-message').textContent.includes('Илья'));c.run("chooseProfile('boss')");assert.equal(c.run('currentUser'),null);
+});
+test('a remembered owner can inspect a manager while retaining owner identity',()=>{
+ const c=protectedPage();c.context.api={getIdentity:()=>({profile:'boss'})};c.run("secureAuth=api;buildBoss=()=>{};bossOpenMgr=id=>{openedManager=id;};chooseProfile('arts')");assert.equal(c.run('currentUser'),'boss');assert.equal(c.run('openedManager'),'arts');
+});
+test('returning to profiles preserves a remembered manager session and reopens own cabinet',()=>{
+ const c=protectedPage();c.context.api={getIdentity:()=>({profile:'ilya'}),logout:()=>{throw Error('Home must not sign out');}};c.run("secureAuth=api;buildMgr=()=>{};chooseProfile('ilya');goStartScreen()");assert.equal(c.run('currentUser'),null);assert.equal(c.el('login-subtitle').textContent,'Выберите свой профиль');c.run("chooseProfile('ilya')");assert.equal(c.run('currentUser'),'ilya');
+});
+test('the original financial summary is available on the authenticated owner start page',()=>{
+ const c=protectedPage();c.context.api={getIdentity:()=>({profile:'boss'})};c.run('secureAuth=api;buildLogin()');assert.ok(c.el('login-list').innerHTML.includes('Команда — маржа'));assert.ok(c.el('login-list').innerHTML.includes('Руководитель'));
 });

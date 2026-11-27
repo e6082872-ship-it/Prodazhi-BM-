@@ -4,8 +4,56 @@ function showProtectionMessage(message){
   const el=document.getElementById('protection-message');
   el.textContent=message;el.hidden=false;
 }
-function authForm(){
-  document.getElementById('login-list').innerHTML=`<form onsubmit="event.preventDefault();secureAuth.login()" style="max-width:400px;margin:auto">
+let selectedProfile=null;
+const originalProfileLanding=buildLogin;
+function profileName(profile){return profile==='boss'?'Руководитель':mgrById(profile)?.name||'';}
+function buildProfileLanding(){
+  document.getElementById('login-subtitle').textContent='Выберите свой профиль';
+  if(secureAuth?.getIdentity()?.profile==='boss'){
+    originalProfileLanding();
+    document.querySelectorAll('#login-list .mgr-card').forEach(card=>{
+      card.setAttribute('role','button');card.tabIndex=0;
+      card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();card.click();}});
+    });
+    return;
+  }
+  const profiles=[...MANAGERS,{id:'boss',name:'Руководитель',cls:'av-boss'}];
+  document.getElementById('login-list').innerHTML=profiles.map(m=>`<button type="button" class="mgr-card" onclick="chooseProfile('${m.id}')" style="width:100%;text-align:left;font:inherit;color:inherit">
+    <span class="avatar ${m.cls}" style="width:40px;height:40px;font-size:14px">${m.id==='boss'?'РУ':safeText(m.name[0])}</span>
+    <span class="mgr-info"><span class="mgr-name" style="display:block">${safeText(m.name)}</span><span class="mgr-sub" style="display:block">${m.id==='boss'?'Полный доступ к дашборду':'Личный кабинет менеджера'}</span></span>
+    <span class="role-badge ${m.id==='boss'?'role-boss':'role-mgr'}">${m.id==='boss'?'Руководитель':'Менеджер'}</span>
+  </button>`).join('');
+}
+function goStartScreen(){
+  if(saving){showProtectionMessage('Дождитесь завершения сохранения.');return;}
+  if(window.bmDrafts.isDirty()&&!confirm('В форме редактирования есть несохранённые изменения. Вернуться к профилям без сохранения?'))return;
+  window.bmDrafts.beforeChange();currentUser=null;selectedProfile=null;editRecord=null;
+  ['s-mgr','s-boss','edit-modal','protection-history'].forEach(id=>show(id,false));
+  show('s-login',true);buildProfileLanding();
+}
+function chooseProfile(profile){
+  if(!profileName(profile))return;
+  const who=secureAuth?.getIdentity();
+  selectedProfile=profile;
+  if(!who||who.profile!==profile&&who.profile!=='boss'){
+    authForm(profile);
+    if(who)document.getElementById('auth-message').textContent='Сейчас вы вошли как '+profileName(who.profile)+'. Для выбранного профиля нужен другой личный аккаунт.';
+    return;
+  }
+  currentUser=who.profile;selectedProfile=null;show('s-login',false);
+  if(who.profile==='boss'){
+    show('s-boss',true);buildBoss();
+    if(profile!=='boss')bossOpenMgr(profile);
+  }else{show('s-mgr',true);buildMgr(profile);window.bmDrafts.restore(profile);}
+}
+
+function authForm(profile){
+  document.getElementById('login-subtitle').textContent='Вход: '+profileName(profile);
+  const who=secureAuth?.getIdentity();
+
+  document.getElementById('login-list').innerHTML=`<form onsubmit="event.preventDefault();if(secureAuth)secureAuth.login();else showProtectionMessage('Личный вход загружается. Повторите через несколько секунд.')" style="max-width:400px;margin:auto">
+    <button class="btn" type="button" onclick="goStartScreen()" style="margin-bottom:12px">← К выбору профиля</button>
+    ${who?`<div id="auth-current-account"><p style="margin-bottom:10px">Текущий аккаунт: ${safeText(profileName(who.profile))}</p><button class="btn" type="button" onclick="chooseProfile('${who.profile}')">Открыть мой кабинет</button><button class="btn" type="button" onclick="logout()">Сменить аккаунт</button></div>`:''}
     <div class="fl"><label for="auth-email">Рабочая почта</label><input type="email" id="auth-email" autocomplete="username" required></div>
     <div class="fl"><label for="auth-password">Пароль</label><input type="password" id="auth-password" autocomplete="current-password" required></div>
     <label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:14px"><input type="checkbox" id="auth-remember" checked style="width:auto;margin:0"> Запомнить вход на этом устройстве</label>
@@ -43,15 +91,10 @@ saveDB=async function(change){
   }catch(e){setSyncDot('err');showProtectionMessage('Сохранение не подтверждено. '+e.message+' Введённые данные остаются в форме.');return false;}
   finally{saving=false;dbRevision++;}
 };
-buildLogin=authForm;
-login=function(profile){
-  if(secureAuth?.getIdentity()?.profile!==profile){showProtectionMessage('Нет доступа к этому профилю.');return;}
-  currentUser=profile;show('s-login',false);
-  if(profile==='boss'){show('s-boss',true);buildBoss();}
-  else{show('s-mgr',true);buildMgr(profile);window.bmDrafts.restore(profile);}
-};
-loginBoss=function(){showProtectionMessage('Для руководителя используется личный вход по почте.');};
-submitBossLogin=function(){loginBoss();};
+buildLogin=buildProfileLanding;
+login=chooseProfile;
+loginBoss=function(){chooseProfile('boss');};
+submitBossLogin=function(){chooseProfile('boss');};
 logout=async function(){
   if(saving){showProtectionMessage('Дождитесь завершения сохранения.');return;}
   if(window.bmDrafts.isDirty()&&!confirm('В форме редактирования есть несохранённые изменения. Выйти без сохранения?'))return;
@@ -112,11 +155,12 @@ async function showProtectionHistory(){
   }catch(e){showProtectionMessage(e.message);}
 }
 init=async function(){
-  authForm();
+  buildProfileLanding();
   try{
     secureAuth=await import('./auth.js');
     secureAuth.boot(result=>{
-      db=normalizeDB(result.data);login(result.profile);
+      db=normalizeDB(result.data);
+      if(selectedProfile)chooseProfile(selectedProfile);else buildProfileLanding();
     },()=>{
       secureAuthEpoch++;window.bmDrafts.beforeChange();currentUser=null;secureOperation=null;
       db={sales:[],activity:[],plans:{}};editRecord=null;dbRevision++;
@@ -127,6 +171,9 @@ init=async function(){
       document.querySelectorAll('#edit-modal input, #edit-modal textarea').forEach(el=>{el.value='';});
       show('s-login',true);
       document.getElementById('boss-pin').value='';
+      document.getElementById('auth-current-account')?.remove();
+      const password=document.getElementById('auth-password');if(password)password.value='';
+      if(!selectedProfile)buildProfileLanding();
     });
     setInterval(async()=>{
       if(!currentUser||saving||!await loadDB())return;
@@ -134,5 +181,5 @@ init=async function(){
         renderBossMetrics();renderBossRanking();renderAllSales();renderActivity();buildTeamGrid();
       }else{renderMyMetrics(currentUser);renderDayHistory(currentUser);renderMySales(currentUser);}
     },30000);
-  }catch{document.getElementById('auth-message').textContent='Защищённый вход ещё не настроен. Обратитесь к руководителю.';}
+  }catch{showProtectionMessage('Личный вход временно недоступен. Обновите страницу или обратитесь к руководителю.');}
 };

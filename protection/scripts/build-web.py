@@ -6,7 +6,9 @@ import hashlib
 root=Path(__file__).resolve().parents[2]
 template=root/'protection/legacy/index.html'
 s=(template if template.exists() else root/'index.html').read_text()
-s=s.replace('Выберите свой профиль','Войдите по рабочей почте')
+s=s.replace('<div style="font-size:12px;color:#666">Выберите свой профиль</div>','<div id="login-subtitle" style="font-size:12px;color:#666">Выберите свой профиль</div>')
+s=s.replace('.topbar{display:flex;', '.topbar{display:flex;flex-wrap:wrap;')
+s=s.replace('<button class="btn" onclick="logout()"', '<button class="btn" onclick="goStartScreen()" style="padding:5px 10px;font-size:11px">Профили</button>\n    <button class="btn" onclick="logout()"')
 s=re.sub(r"const DB_URL = .*?;\n",'',s)
 s=re.sub(r"const BOSS_PIN = .*?\n",'',s)
 # Remove direct database traffic; the secure bridge supplies authenticated functions.
