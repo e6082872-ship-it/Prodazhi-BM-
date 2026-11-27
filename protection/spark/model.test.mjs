@@ -23,3 +23,7 @@ test('protected page refuses a save under another profile',async()=>{
  const c=protectedPage();c.context.api={getIdentity:()=>({profile:'ilya'}),save:()=>{throw Error('must not call');}};
  c.run("secureAuth=api;currentUser='artg'");assert.equal(await c.run('saveDB(()=>{})'),false);assert.ok(c.el('protection-message').textContent.includes('свой профиль'));
 });
+test('migration verification tolerates Firebase reordering same-day activity records',()=>{
+ const source={sales:[sale],activity:[{mgr:'ilya',date:'2026-11-27',found:2},{mgr:'artg',date:'2026-11-27',found:3}],plans:{}};
+ const state=convert(source);const reordered=Object.fromEntries(Object.entries(state.profiles).reverse());assert.ok(equal(view(state.profiles),view(reordered)));
+});

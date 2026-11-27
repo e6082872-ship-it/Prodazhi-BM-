@@ -9,7 +9,7 @@ export function view(profiles){
   const v=current(record);if(!v||v.deleted)continue;
   if(kind==='plans')data.plans[profile+'_'+id]=v.payload;else data[kind]?.push(v.payload);
  }
- data.sales.sort((a,b)=>(b.ts||0)-(a.ts||0));data.activity.sort((a,b)=>b.date.localeCompare(a.date));return JSON.parse(JSON.stringify(data));
+ data.sales.sort((a,b)=>(b.ts||0)-(a.ts||0)||String(a.id).localeCompare(String(b.id)));data.activity.sort((a,b)=>b.date.localeCompare(a.date)||a.mgr.localeCompare(b.mgr));return JSON.parse(JSON.stringify(data));
 }
 export function differences(before,after){
  const changes=[];
