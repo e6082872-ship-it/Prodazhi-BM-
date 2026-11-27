@@ -20,9 +20,25 @@ export function differences(before,after){
  }
  if(changes.length>100)throw Error('Слишком много изменений одновременно.');return changes;
 }
-export function makeUpdates(profiles,claims,changes,actor,op,timestamp){
+export const teamSaleFields=['id','mgr','company','date','shipDate','client','tech','sum','margin','type','status','bonus','reimburse','reimbursed','investorShare','investorPaid','ts'];
+export function projectTeamSale(sale){return Object.fromEntries(teamSaleFields.filter(key=>sale[key]!==undefined&&sale[key]!==null).map(key=>[key,sale[key]]));}
+export function buildTeamView(profiles){
+ const result={enabled:true,sales:{},plans:{}};
+ for(const [profile,kinds]of Object.entries(profiles||{}))for(const kind of ['sales','plans'])for(const [id,record]of Object.entries(kinds[kind]||{})){
+  const v=current(record);if(!v||v.deleted)continue;result[kind][profile]||={};result[kind][profile][id]=kind==='sales'?projectTeamSale(v.payload):{margin:v.payload.margin,av:v.payload.av};
+ }
+ return result;
+}
+export function teamFinanceData(projection){
+ if(projection?.enabled!==true)throw Error('Обзор команды ещё подключается. Повторите позже.');
+ const data=empty();for(const rows of Object.values(projection.sales||{}))data.sales.push(...Object.values(rows));
+ for(const [profile,months]of Object.entries(projection.plans||{}))for(const [month,plan]of Object.entries(months))data.plans[profile+'_'+month]=plan;
+ return JSON.parse(JSON.stringify(data));
+}
+export function makeUpdates(profiles,claims,changes,actor,op,timestamp,publishTeam=true){
  const updates={};
  for(const c of changes){
+  if(c.kind==='plans'&&c.after)c.after={...c.after,margin:c.after.margin??0,av:c.after.av??0};
   if(actor.profile!=='boss'&&(actor.profile!==c.profile||c.kind==='plans'||!c.after))throw Error('Недостаточно прав.');
   const record=profiles?.[c.profile]?.[c.kind]?.[c.id],v=current(record);
   if(v?.op===op&&equal(v.deleted?null:v.payload,c.after))continue;
@@ -39,6 +55,7 @@ export function makeUpdates(profiles,claims,changes,actor,op,timestamp){
   }
   updates[path+'/head']=head;
   updates[path+'/versions/'+head]={uid:actor.uid,at:timestamp,op,deleted:!c.after,payload};
+  if(publishTeam&&(c.kind==='sales'||c.kind==='plans'))updates[`spark/teamView/${c.kind}/${c.profile}/${c.id}`]=c.after?(c.kind==='sales'?projectTeamSale(c.after):{margin:c.after.margin,av:c.after.av}):null;
  }
  return updates;
 }

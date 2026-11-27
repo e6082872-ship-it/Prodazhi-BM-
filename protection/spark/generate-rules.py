@@ -5,6 +5,7 @@ access="auth != null && auth.token.email_verified == true && root.child('spark/a
 role="root.child('spark/access').child(auth.uid).child('profile').val()"
 boss=role+" == 'boss'"
 allowed=access+" && ("+boss+" || "+role+" == $profile)"
+team_fields=['id','mgr','company','date','shipDate','client','tech','sum','margin','type','status','bonus','reimburse','reimbursed','investorShare','investorPaid','ts']
 # No parent write grant: history nodes are create-only even for the owner.
 rules={'.read':False,'.write':False,'dashboard':{'.read':False,'.write':False},'dashboard_test':{'.read':False,'.write':False},'data':{'.read':True,'.write':True},'presence':{'.read':True,'.write':True}}
 spark={'access':{'$uid':{'.read':access+' && auth.uid == $uid'}},'profiles':{'.read':access+' && '+boss,'$profile':{'.read':allowed}}}
@@ -34,6 +35,12 @@ for kind in ['sales','activity','plans']:
         version['.write']=access+' && '+boss+' && !data.exists()'
         payload['.validate']="newData.hasChildren(['margin','av'])"
     payload['$other']={'.validate':False}
+    if kind in ['sales','plans']:
+        fields=team_fields if kind=='sales' else ['margin','av']
+        top="newData"+".parent()"*6
+        shared=top+".child('teamView/"+kind+"').child($profile).child($id)"
+        matches=" && ".join(shared+".child('"+field+"').val() == newData.child('payload/"+field+"').val()" for field in fields)
+        version['.validate']+=" && ("+top+".child('teamView/enabled').val() != true || (newData.child('deleted').val() == true ? !"+shared+".exists() : "+shared+".exists() && "+matches+"))"
     version['payload']=payload
     record['versions']={'$version':version}
     record['$other']={'.validate':False}
@@ -45,6 +52,19 @@ for field in ['vin','stockNo']:
     current=target+".child('versions').child("+target+".child('head').val()+'').child('payload')"
     claims[field]={'$key':{'.write':access+' && !data.exists()', '.validate':"newData.hasChildren(['profile','id']) && ("+boss+" || newData.child('profile').val() == "+role+") && "+current+".child('"+field+"').val() == $key",'profile':{'.validate':'newData.isString()'},'id':{'.validate':'newData.isString()'},'$other':{'.validate':False}}}
 
+team={'.read':access,'enabled':{'.write':False}}
+for kind in ['sales','plans']:
+    fields=team_fields if kind=='sales' else ['margin','av']
+    top="newData"+".parent()"*4
+    private=top+".child('profiles').child($profile).child('"+kind+"').child($id)"
+    latest=private+".child('versions').child("+private+".child('head').val()+'')"
+    canwrite=allowed if kind=='sales' else access+' && '+boss
+    row={'.write':canwrite+" && (newData.exists() || "+latest+".child('deleted').val() == true)",'.validate':latest+".exists() && "+latest+".child('deleted').val() == false"}
+    for field in fields:row['.validate']+=" && newData.child('"+field+"').val() == "+latest+".child('payload/"+field+"').val()"
+    row.update({field:{'.validate':True}for field in fields})
+    row['$other']={'.validate':False}
+    team[kind]={'$profile':{'$id':row}}
+spark['teamView']=team
 spark['claims']=claims
 rules['spark']=spark
 (HERE/'database.rules.json').write_text(json.dumps({'rules':rules},ensure_ascii=False,indent=2)+'\n')

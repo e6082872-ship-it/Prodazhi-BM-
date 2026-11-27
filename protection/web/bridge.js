@@ -9,8 +9,10 @@ const originalProfileLanding=buildLogin;
 function profileName(profile){return profile==='boss'?'Руководитель':mgrById(profile)?.name||'';}
 function buildProfileLanding(){
   document.getElementById('login-subtitle').textContent='Выберите свой профиль';
+  const sharedEntry=typeof teamFinanceEntry==='function'?teamFinanceEntry():'';
   if(secureAuth?.getIdentity()?.profile==='boss'){
     originalProfileLanding();
+    document.getElementById('login-list').innerHTML=sharedEntry+document.getElementById('login-list').innerHTML;
     document.querySelectorAll('#login-list .mgr-card').forEach(card=>{
       card.setAttribute('role','button');card.tabIndex=0;
       card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();card.click();}});
@@ -18,7 +20,7 @@ function buildProfileLanding(){
     return;
   }
   const profiles=[...MANAGERS,{id:'boss',name:'Руководитель',cls:'av-boss'}];
-  document.getElementById('login-list').innerHTML=profiles.map(m=>`<button type="button" class="mgr-card" onclick="chooseProfile('${m.id}')" style="width:100%;text-align:left;font:inherit;color:inherit">
+  document.getElementById('login-list').innerHTML=sharedEntry+profiles.map(m=>`<button type="button" class="mgr-card" onclick="chooseProfile('${m.id}')" style="width:100%;text-align:left;font:inherit;color:inherit">
     <span class="avatar ${m.cls}" style="width:40px;height:40px;font-size:14px">${m.id==='boss'?'РУ':safeText(m.name[0])}</span>
     <span class="mgr-info"><span class="mgr-name" style="display:block">${safeText(m.name)}</span><span class="mgr-sub" style="display:block">${m.id==='boss'?'Полный доступ к дашборду':'Личный кабинет менеджера'}</span></span>
     <span class="role-badge ${m.id==='boss'?'role-boss':'role-mgr'}">${m.id==='boss'?'Руководитель':'Менеджер'}</span>
@@ -28,11 +30,12 @@ function goStartScreen(){
   if(saving){showProtectionMessage('Дождитесь завершения сохранения.');return;}
   if(window.bmDrafts.isDirty()&&!confirm('В форме редактирования есть несохранённые изменения. Вернуться к профилям без сохранения?'))return;
   window.bmDrafts.beforeChange();currentUser=null;selectedProfile=null;editRecord=null;
-  ['s-mgr','s-boss','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>show(id,false));
+  ['s-mgr','s-boss','s-team-finance','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>show(id,false));
   show('s-login',true);buildProfileLanding();
 }
 function chooseProfile(profile){
   if(!profileName(profile))return;
+  show('s-team-finance',false);
   const who=secureAuth?.getIdentity();
   selectedProfile=profile;
   if(!who||who.profile!==profile&&who.profile!=='boss'){
@@ -162,10 +165,11 @@ init=async function(){
       db=normalizeDB(result.data);
       if(selectedProfile)chooseProfile(selectedProfile);else buildProfileLanding();
     },()=>{
+      if(typeof clearTeamFinance==='function')clearTeamFinance();
       secureAuthEpoch++;window.bmDrafts.beforeChange();currentUser=null;secureOperation=null;
       db={sales:[],activity:[],plans:{}};editRecord=null;dbRevision++;
-      ['s-mgr','s-boss','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});
-      for(const id of ['my-sales-body','my-metrics','stat-content','day-history','my-client-search-results','boss-metrics','boss-ranking','boss-insights','all-sales-body','all-sales-total','activity-body','team-grid','client-search-results','plans-form','plans-progress','protection-history-content','manager-metric-content','open-deals-content']) {
+      ['s-mgr','s-boss','s-team-finance','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});
+      for(const id of ['my-sales-body','my-metrics','stat-content','day-history','my-client-search-results','boss-metrics','boss-ranking','boss-insights','all-sales-body','all-sales-total','activity-body','team-grid','client-search-results','plans-form','plans-progress','protection-history-content','manager-metric-content','open-deals-content','team-finance-content','team-finance-month','team-finance-manager']) {
         const el=document.getElementById(id);if(el)el.replaceChildren();
       }
       document.querySelectorAll('#edit-modal input, #edit-modal textarea').forEach(el=>{el.value='';});

@@ -130,7 +130,7 @@ tr:last-child td{border-bottom:none}
     <button class="nav-btn" onclick="mgrTab('my',this)"><i class="ti ti-chart-bar"></i> Итоги</button>
     <button class="nav-btn" onclick="mgrTab('sales',this)"><i class="ti ti-plus"></i> Сделка</button>
     <button class="nav-btn" onclick="mgrTab('stat',this)"><i class="ti ti-user"></i> Статистика</button>
-    <button class="nav-btn" onclick="mgrTab('clients',this)"><i class="ti ti-search"></i> Клиенты</button>
+    <button class="nav-btn" onclick="openTeamFinance()">Обзор команды</button><button class="nav-btn" onclick="mgrTab('clients',this)"><i class="ti ti-search"></i> Клиенты</button>
   </div>
 
   <div id="t-day" class="screen on">
@@ -223,6 +223,7 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<div id="s-team-finance" class="screen"><div class="topbar"><div class="topbar-title">Обзор команды</div><span class="badge bb">Только просмотр</span><button class="btn" onclick="chooseProfile(secureAuth.getIdentity()?.profile)">Мой кабинет</button><button class="btn" onclick="goStartScreen()">Профили</button></div><div class="card"><label for="team-finance-month">Период: </label><select id="team-finance-month" onchange="renderTeamFinance()" style="max-width:250px"></select></div><div class="card"><label for="team-finance-manager">Менеджер: </label><select id="team-finance-manager" onchange="renderTeamFinance()" style="max-width:250px"><option value="">Все менеджеры</option></select></div><div id="team-finance-content"></div></div>
 <div id="s-boss" class="screen">
   <div class="topbar">
     <div class="topbar-title">Дашборд руководителя</div><button class="btn" onclick="showProtectionHistory()">История и корзина</button><button class="btn" onclick="secureAuth.downloadBackup().catch(e=>showProtectionMessage(e.message))">Скачать резервную копию</button>
@@ -2250,8 +2251,10 @@ const originalProfileLanding=buildLogin;
 function profileName(profile){return profile==='boss'?'Руководитель':mgrById(profile)?.name||'';}
 function buildProfileLanding(){
   document.getElementById('login-subtitle').textContent='Выберите свой профиль';
+  const sharedEntry=typeof teamFinanceEntry==='function'?teamFinanceEntry():'';
   if(secureAuth?.getIdentity()?.profile==='boss'){
     originalProfileLanding();
+    document.getElementById('login-list').innerHTML=sharedEntry+document.getElementById('login-list').innerHTML;
     document.querySelectorAll('#login-list .mgr-card').forEach(card=>{
       card.setAttribute('role','button');card.tabIndex=0;
       card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();card.click();}});
@@ -2259,7 +2262,7 @@ function buildProfileLanding(){
     return;
   }
   const profiles=[...MANAGERS,{id:'boss',name:'Руководитель',cls:'av-boss'}];
-  document.getElementById('login-list').innerHTML=profiles.map(m=>`<button type="button" class="mgr-card" onclick="chooseProfile('${m.id}')" style="width:100%;text-align:left;font:inherit;color:inherit">
+  document.getElementById('login-list').innerHTML=sharedEntry+profiles.map(m=>`<button type="button" class="mgr-card" onclick="chooseProfile('${m.id}')" style="width:100%;text-align:left;font:inherit;color:inherit">
     <span class="avatar ${m.cls}" style="width:40px;height:40px;font-size:14px">${m.id==='boss'?'РУ':safeText(m.name[0])}</span>
     <span class="mgr-info"><span class="mgr-name" style="display:block">${safeText(m.name)}</span><span class="mgr-sub" style="display:block">${m.id==='boss'?'Полный доступ к дашборду':'Личный кабинет менеджера'}</span></span>
     <span class="role-badge ${m.id==='boss'?'role-boss':'role-mgr'}">${m.id==='boss'?'Руководитель':'Менеджер'}</span>
@@ -2269,11 +2272,12 @@ function goStartScreen(){
   if(saving){showProtectionMessage('Дождитесь завершения сохранения.');return;}
   if(window.bmDrafts.isDirty()&&!confirm('В форме редактирования есть несохранённые изменения. Вернуться к профилям без сохранения?'))return;
   window.bmDrafts.beforeChange();currentUser=null;selectedProfile=null;editRecord=null;
-  ['s-mgr','s-boss','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>show(id,false));
+  ['s-mgr','s-boss','s-team-finance','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>show(id,false));
   show('s-login',true);buildProfileLanding();
 }
 function chooseProfile(profile){
   if(!profileName(profile))return;
+  show('s-team-finance',false);
   const who=secureAuth?.getIdentity();
   selectedProfile=profile;
   if(!who||who.profile!==profile&&who.profile!=='boss'){
@@ -2398,15 +2402,16 @@ async function showProtectionHistory(){
 init=async function(){
   buildProfileLanding();
   try{
-    secureAuth=await import('./auth.js?v=42d60fe8d266');
+    secureAuth=await import('./auth.js?v=7ffc1f89c592');
     secureAuth.boot(result=>{
       db=normalizeDB(result.data);
       if(selectedProfile)chooseProfile(selectedProfile);else buildProfileLanding();
     },()=>{
+      if(typeof clearTeamFinance==='function')clearTeamFinance();
       secureAuthEpoch++;window.bmDrafts.beforeChange();currentUser=null;secureOperation=null;
       db={sales:[],activity:[],plans:{}};editRecord=null;dbRevision++;
-      ['s-mgr','s-boss','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});
-      for(const id of ['my-sales-body','my-metrics','stat-content','day-history','my-client-search-results','boss-metrics','boss-ranking','boss-insights','all-sales-body','all-sales-total','activity-body','team-grid','client-search-results','plans-form','plans-progress','protection-history-content','manager-metric-content','open-deals-content']) {
+      ['s-mgr','s-boss','s-team-finance','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});
+      for(const id of ['my-sales-body','my-metrics','stat-content','day-history','my-client-search-results','boss-metrics','boss-ranking','boss-insights','all-sales-body','all-sales-total','activity-body','team-grid','client-search-results','plans-form','plans-progress','protection-history-content','manager-metric-content','open-deals-content','team-finance-content','team-finance-month','team-finance-manager']) {
         const el=document.getElementById(id);if(el)el.replaceChildren();
       }
       document.querySelectorAll('#edit-modal input, #edit-modal textarea').forEach(el=>{el.value='';});
@@ -2457,7 +2462,8 @@ function managerMetricDetails(data,id,kind,month){
 function renderManagerMetricDetails(model){
   const e=safeText,amount=value=>'₽'+fmt(value||0);
   const period=model.allPeriods?'Все периоды':model.month&&model.month!=='all'?new Date(model.month+'-01T12:00:00').toLocaleDateString('ru-RU',{month:'long',year:'numeric'}):'Все периоды';
-  let html=`<p style="margin-bottom:10px;color:#666">${e(mgrById(model.id).name)} · ${e(period)}</p><p style="margin-bottom:12px"><strong>Итого: ${e(model.money?amount(model.total):fmt(model.total))}</strong> · ${model.records.length} ${model.activity?'дневных отчётов':'записей'}</p>`;
+  let html=`<p style="margin-bottom:10px;color:#666">${e(model.team?(model.subject||'Вся команда'):mgrById(model.id).name)} · ${e(period)}</p><p style="margin-bottom:12px"><strong>Итого: ${e(model.money?amount(model.total):fmt(model.total))}</strong> · ${model.records.length} ${model.activity?'дневных отчётов':'записей'}</p>`;
+  if(model.note)html+='<p style="margin-bottom:12px;color:#666">'+e(model.note)+'</p>';
   if(model.allPeriods&&model.kind==='open')html+='<p style="margin-bottom:12px;color:#666">Все сделки в работе и с полученным авансом, независимо от месяца.</p>';
   if(!model.records.length)return html+'<div class="empty">Нет записей для этого показателя.</div>';
   const td=(value,compact=false)=>'<td style="'+(compact?'white-space:nowrap':'white-space:normal;overflow-wrap:anywhere')+'">'+e(value??'—')+'</td>';
@@ -2466,9 +2472,10 @@ function renderManagerMetricDetails(model){
     html+='<div style="overflow-x:auto"><table style="table-layout:auto;min-width:620px"><thead><tr><th>Дата</th><th>Новые</th><th>Повторные</th><th>Контакты</th><th>Брони</th><th>Объявления</th><th>Комментарий</th></tr></thead><tbody>';
     for(const a of model.records)html+='<tr>'+td(fmtDate(a.date),true)+td(Number(a.newc||0),true)+td(Number(a.rep||0),true)+td(Number(a.newc||0)+Number(a.rep||0),true)+td(Number(a.book||0),true)+td(Number(a.ads||0)+Number(a.upd||0),true)+td(a.comm||'—')+'</tr>';
   }else{
-    const extra=model.kind==='bonus'?'Бонус':model.kind==='reimburse'?'К возврату':'Маржа';
-    html+='<div style="overflow-x:auto"><table style="table-layout:auto;min-width:740px"><thead><tr><th>Дата сделки</th><th>Отгрузка</th><th>Клиент</th><th>Техника</th><th>Сумма</th><th>'+extra+'</th><th>Тип</th><th>Статус</th></tr></thead><tbody>';
-    for(const s of model.records)html+='<tr>'+td(fmtDate(s.date),true)+td(fmtDate(s.shipDate)||'—',true)+td(s.client||'—')+td(s.tech||'—')+td(amount(s.sum),true)+td(amount(s[model.kind==='bonus'?'bonus':model.kind==='reimburse'?'reimburse':'margin']),true)+td(s.type||'—')+td(s.status||'—')+'</tr>';
+    const extraField=['bonus','reimburse','investorShare'].includes(model.field)?model.field:'margin';
+    const extra={bonus:'Бонус',reimburse:'К возврату',investorShare:'Доля инвестора',margin:'Маржа'}[extraField];
+    html+='<div style="overflow-x:auto"><table style="table-layout:auto;min-width:740px"><thead><tr><th>Дата сделки</th><th>Отгрузка</th>'+(model.team?'<th>Менеджер</th>':'')+'<th>Клиент</th><th>Техника</th><th>Сумма</th><th>'+extra+'</th><th>Тип</th><th>Статус</th></tr></thead><tbody>';
+    for(const s of model.records)html+='<tr>'+td(fmtDate(s.date),true)+td(fmtDate(s.shipDate)||'—',true)+(model.team?td(mgrById(s.mgr)?.name||s.mgr):'')+td(s.client||'—')+td(s.tech||'—')+td(amount(s.sum),true)+td(amount(s[extraField]),true)+td(s.type||'—')+td(s.status||'—')+'</tr>';
   }
   return html+'</tbody></table></div>';
 }
@@ -2506,6 +2513,79 @@ const metricOriginalStat=renderStat;
 renderStat=function(id){metricOriginalStat(id);bindManagerMetrics(document.getElementById('stat-content'),id,today().slice(0,7));};
 const metricOriginalMonthChange=onMonthChange;
 onMonthChange=function(){metricOriginalMonthChange();if(currentUser==='boss'&&metricManagerId&&document.getElementById('b-team').classList.contains('on'))bossOpenMgr(metricManagerId);};
+
+// Shared finance is a read-only projection; personal records and editing keep their existing scope.
+let teamFinanceSnapshot=null,teamFinanceRequest=0;
+function teamFinanceMetric(data,kind,month,now=Date.now()){
+  const closed=filterSalesByMonth(data.sales.filter(s=>s.status==='Закрыта'),month),normal=closed.filter(s=>s.type!=='АВ');
+  const labels={revenue:'Оборот',sales:'Продаж закрыто',open:'Текущих сделок',stale:'Зависшие сделки',margin:'Маржа (всего)',marginKT:'Маржа КТ',marginAS:'Маржа АС',av:'АВ',bonus:'Бонусы всего',bonusFirst:'К выплате до 15',bonusSecond:'К выплате с 15',reimburse:'К возврату менеджерам',investor:'Доля инвестора',missingShip:'Без даты отгрузки'};
+  if(!labels[kind])throw Error('Неизвестный показатель.');
+  let rows,field='margin',money=true,allPeriods=false,note='';
+  if(['revenue','sales','margin'].includes(kind)){rows=normal;field=kind==='margin'?'margin':'sum';money=kind!=='sales';}
+  else if(kind==='marginKT')rows=normal.filter(s=>['КТ','БМ'].includes(s.company||'КТ'));
+  else if(kind==='marginAS')rows=normal.filter(s=>s.company==='АС');
+  else if(kind==='av')rows=closed.filter(s=>s.type==='АВ');
+  else if(['bonus','bonusFirst','bonusSecond'].includes(kind)){
+    rows=closed.filter(s=>Number(s.bonus||0)!==0);field='bonus';
+    if(kind!=='bonus'){rows=rows.filter(s=>{const day=Number(saleDate(s).split('-')[2]);return kind==='bonusFirst'?day>=1&&day<=15:day>15;});note=kind==='bonusFirst'?'По дате отгрузки (либо сделки): с 1-го по 15-е включительно.':'По дате отгрузки (либо сделки): с 16-го до конца месяца.';}
+  }else if(kind==='investor'){rows=closed.filter(s=>Number(s.investorShare||0)>0);field='investorShare';}
+  else if(kind==='reimburse'){rows=data.sales.filter(s=>Number(s.reimburse||0)>0&&!s.reimbursed);field='reimburse';allPeriods=true;}
+  else if(kind==='missingShip'){rows=data.sales.filter(s=>s.status==='Закрыта'&&!s.shipDate);money=false;allPeriods=true;}
+  else{rows=data.sales.filter(s=>s.status==='В работе'||s.status==='Аванс получен');money=false;allPeriods=true;if(kind==='stale'){rows=rows.filter(s=>s.ts&&(now-s.ts)>14*86400000);note='Текущие сделки старше 14 дней.';}}
+  const records=[...rows].sort((a,b)=>saleDate(b).localeCompare(saleDate(a)));
+  return {team:true,kind,month,title:labels[kind],records,field,money,activity:false,allPeriods,note,total:money?records.reduce((n,s)=>n+Number(s[field]||0),0):records.length};
+}
+function clearTeamFinance(){teamFinanceRequest++;teamFinanceSnapshot=null;}
+function filterTeamFinance(data,profile){return profile?{sales:data.sales.filter(s=>s.mgr===profile),activity:[],plans:Object.fromEntries(Object.entries(data.plans).filter(([key])=>key.startsWith(profile+'_')))}:data;}
+function openTeamFinance(){
+  const actor=secureAuth?.getIdentity();if(!actor){showProtectionMessage('Для общего обзора войдите в личный кабинет.');return;}
+  if(saving){showProtectionMessage('Дождитесь завершения сохранения.');return;}
+  if(window.bmDrafts.isDirty()&&!confirm('В редактировании есть несохранённые изменения. Открыть обзор без сохранения?'))return;
+  window.bmDrafts.persist();window.bmDrafts.resetDirty();editRecord=null;currentUser=actor.profile;selectedProfile=null;
+  ['s-login','s-mgr','s-boss','edit-modal','manager-metric-modal','open-deals-modal'].forEach(id=>show(id,false));
+  show('s-team-finance',true);renderTeamFinance();
+}
+async function renderTeamFinance(){
+  const actor=secureAuth?.getIdentity();if(!actor||currentUser!==actor.profile)return;
+  const ticket=++teamFinanceRequest,epoch=secureAuthEpoch;
+  const managerInput=document.getElementById('team-finance-manager'),selectedManager=managerInput.value||'';
+  const monthInput=document.getElementById('team-finance-month'),chosen=monthInput.value||today().slice(0,7),container=document.getElementById('team-finance-content');
+  if(!teamFinanceSnapshot)container.innerHTML='<div class="loading">Загрузка общей сводки…</div>';
+  try{
+    const data=await secureAuth.teamFinance();if(ticket!==teamFinanceRequest||epoch!==secureAuthEpoch||!document.getElementById('s-team-finance').classList.contains('on'))return;
+    teamFinanceSnapshot=data;
+    const months=new Set([today().slice(0,7)]);data.sales.forEach(s=>{if(/^\d{4}-\d{2}/.test(saleDate(s)))months.add(saleDate(s).slice(0,7));});
+    Object.keys(data.plans).forEach(key=>{const m=key.slice(-7);if(/^\d{4}-\d{2}$/.test(m))months.add(m);});
+    monthInput.innerHTML=[...months].sort().reverse().map(m=>`<option value="${m}">${new Date(m+'-01T12:00:00').toLocaleDateString('ru-RU',{month:'long',year:'numeric'})}</option>`).join('');
+    monthInput.value=months.has(chosen)?chosen:today().slice(0,7);
+    managerInput.innerHTML='<option value="">Все менеджеры</option>'+MANAGERS.map(m=>`<option value="${m.id}">${safeText(m.name)}</option>`).join('');managerInput.value=selectedManager;
+    const scoped=filterTeamFinance(data,selectedManager);
+    const month=monthInput.value,plan=MANAGERS.reduce((n,m)=>n+Number(scoped.plans[m.id+'_'+month]?.margin||0),0);
+    const kinds=['revenue','sales','open','stale','margin','marginKT','marginAS','av','bonus','bonusFirst','bonusSecond','reimburse','investor','missingShip'];
+    container.innerHTML='<div class="metrics">'+kinds.map(kind=>{
+      const metric=teamFinanceMetric(scoped,kind,month);let sub='';
+      if(kind==='margin'&&plan>0)sub='план '+Math.round(metric.total/plan*100)+'%';
+      else if(['marginKT','marginAS','reimburse','investor'].includes(kind))sub='Записей: '+metric.records.length;
+      else if(kind==='stale')sub='старше 14 дней';
+      return `<button type="button" class="m metric-drilldown" onclick="showTeamFinanceMetric('${kind}')" aria-haspopup="dialog" aria-controls="manager-metric-modal"><div class="m-v">${metric.money?'₽':''}${fmt(metric.total)}</div><div class="m-l">${metric.title}</div>${sub?'<div class="m-s">'+sub+'</div>':''}</button>`;
+    }).join('')+'</div>';
+  }catch(e){if(ticket===teamFinanceRequest&&epoch===secureAuthEpoch)container.textContent=e.message||'Общую сводку пока не удалось загрузить.';}
+}
+async function showTeamFinanceMetric(kind){
+  const actor=secureAuth?.getIdentity();if(!actor||currentUser!==actor.profile||!document.getElementById('s-team-finance').classList.contains('on'))return;
+  const epoch=secureAuthEpoch,month=document.getElementById('team-finance-month').value,selectedManager=document.getElementById('team-finance-manager').value;
+  try{
+    const data=await secureAuth.teamFinance();if(epoch!==secureAuthEpoch||currentUser!==actor.profile)return;
+    const metric=teamFinanceMetric(filterTeamFinance(data,selectedManager),kind,month);metric.subject=selectedManager?profileName(selectedManager):'Вся команда';managerMetricTrigger=document.activeElement;
+    document.getElementById('manager-metric-title').textContent=metric.title+' — '+metric.subject;
+    document.getElementById('manager-metric-content').innerHTML=renderManagerMetricDetails(metric);
+    document.getElementById('manager-metric-modal').classList.add('on');document.getElementById('manager-metric-close').focus();
+  }catch(e){showProtectionMessage(e.message);}
+}
+const teamOriginalLoad=loadDB;
+loadDB=async function(){const ok=await teamOriginalLoad();if(ok&&document.getElementById('s-team-finance').classList.contains('on'))renderTeamFinance();return ok;};
+
+function teamFinanceEntry(){return secureAuth?.getIdentity()?'<button type="button" class="btn" style="margin-bottom:8px" onclick="openTeamFinance()">Обзор команды</button>':'';}
 
 init();
 </script>
