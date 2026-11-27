@@ -427,41 +427,92 @@ const MANAGERS = [
 let db = {sales:[], activity:[], plans:{}};
 let currentUser = null;
 let saving = false;
+let dbRevision = 0;
+let dayBaseline = null;
+let plansBaseline = {};
+let pendingSale = null;
+
+function clone(value) { return JSON.parse(JSON.stringify(value)); }
+function same(a, b) {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every(k => Object.prototype.hasOwnProperty.call(b, k) && same(a[k], b[k]));
+}
+function normalizeDB(json) {
+  const data = json || {};
+  data.sales = data.sales || [];
+  data.activity = data.activity || [];
+  data.plans = data.plans || {};
+  // Совместимость со старыми названиями без записи в базу при чтении.
+  data.sales.forEach(s => { if (s.company === 'БМ') s.company = 'КТ'; });
+  return data;
+}
+function saleHandle(s) {
+  // В кнопке хранится снимок сделки, а не меняющийся при обновлении индекс.
+  return encodeURIComponent(JSON.stringify(s)).replace(/'/g, '%27');
+}
+function saleFromHandle(handle) { return JSON.parse(decodeURIComponent(handle)); }
+function replaceSale(data, before, after) {
+  const matches = data.sales.map((s, i) => same(s, before) ? i : -1).filter(i => i >= 0);
+  if (matches.length !== 1) throw new Error('Сделка уже изменена другим сотрудником. Закройте форму, обновите список и откройте сделку заново. Введённые данные пока остаются в форме.');
+  data.sales[matches[0]] = after;
+}
 
 async function loadDB() {
+  const revision = dbRevision;
   try {
-    const r = await fetch(DB_URL);
-    const json = await r.json();
-    db = json || {sales:[], activity:[], plans:{}};
-    if (!db.sales) db.sales = [];
-    if (!db.activity) db.activity = [];
-    if (!db.plans) db.plans = {};
-    // Миграция: компания БМ переименована в КТ
-    let renamed = false;
-    db.sales.forEach(s => { if (s.company === 'БМ') { s.company = 'КТ'; renamed = true; } });
-    if (renamed) saveDB();
+    const r = await fetch(DB_URL, {cache: 'no-store'});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = normalizeDB(await r.json());
+    if (saving || revision !== dbRevision) return false;
+    db = data;
     return true;
   } catch(e) {
+    setSyncDot('err');
     return false;
   }
 }
 
-async function saveDB() {
-  if (saving) return;
+// Транзакция: применяем только данное действие к свежим данным.
+// If-Match не позволяет записать снимок, если сервер уже изменился.
+async function saveDB(change) {
+  if (saving) {
+    alert('Дождитесь завершения предыдущего сохранения и повторите действие.');
+    return false;
+  }
   saving = true;
+  dbRevision++;
   setSyncDot('loading');
   try {
-    await fetch(DB_URL, {
-      method: 'PUT',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(db)
-    });
-    setSyncDot('ok');
-    setTimeout(() => setSyncDot('idle'), 3000);
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const r = await fetch(DB_URL, {headers: {'X-Firebase-ETag': 'true'}, cache: 'no-store'});
+      if (!r.ok) throw new Error('Ошибка чтения: HTTP ' + r.status);
+      const etag = r.headers.get('ETag');
+      if (!etag) throw new Error('Сервер не подтвердил версию данных.');
+      const latest = normalizeDB(await r.json());
+      change(latest);
+      const result = await fetch(DB_URL, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json', 'if-match': etag},
+        body: JSON.stringify(latest)
+      });
+      if (result.status === 412) continue;
+      if (!result.ok) throw new Error('Ошибка записи: HTTP ' + result.status);
+      db = latest;
+      setSyncDot('ok');
+      setTimeout(() => { if (!saving) setSyncDot('idle'); }, 3000);
+      return true;
+    }
+    throw new Error('Данные часто обновляются другими сотрудниками. Повторите сохранение.');
   } catch(e) {
     setSyncDot('err');
+    alert('Сохранение не подтверждено. ' + e.message + '\nДанные в форме сохранены. При обрыве связи проверьте список перед повторной отправкой.');
+    return false;
+  } finally {
+    saving = false;
+    dbRevision++;
   }
-  saving = false;
 }
 
 function setSyncDot(state) {
@@ -703,6 +754,7 @@ function buildMgr(id) {
   document.getElementById('s-date').value = today();
   document.getElementById('daily-date-label').textContent = 'Сегодня, ' + new Date().toLocaleDateString('ru-RU', {day:'numeric', month:'long'});
   const prev = db.activity.find(a => a.mgr === id && a.date === today());
+  dayBaseline = prev ? clone(prev) : null;
   if (prev) {
     ['found','book','ads','upd','newc','rep'].forEach(f => {
       const el = document.getElementById('d-' + f);
@@ -743,9 +795,14 @@ async function saveDay() {
     rep:   Number(document.getElementById('d-rep').value   || 0),
     comm:  document.getElementById('d-comm').value || ''
   };
-  db.activity = db.activity.filter(a => !(a.mgr === id && a.date === today()));
-  db.activity.unshift(rec);
-  await saveDB();
+  const before = dayBaseline ? clone(dayBaseline) : null;
+  if (!await saveDB(data => {
+    const existing = data.activity.find(a => a.mgr === id && a.date === rec.date) || null;
+    if (!same(existing, before)) throw new Error('Отчёт за этот день уже изменён. Откройте кабинет заново и сверяйте данные перед повторным сохранением.');
+    data.activity = data.activity.filter(a => !(a.mgr === id && a.date === rec.date));
+    data.activity.unshift(rec);
+  })) return;
+  dayBaseline = clone(rec);
   const ok = document.getElementById('day-ok');
   ok.style.display = 'block';
   setTimeout(() => ok.style.display = 'none', 3000);
@@ -822,7 +879,7 @@ function renderMySales(id) {
     const tc = s.type === 'Лизинг' ? 'bb' : s.type === 'Безнал' ? 'bg' : s.type === 'АВ' ? 'ba' : '';
     const bonusCell = s.status === 'Закрыта' && s.bonus > 0 ? `<span class="badge bg">+₽${fmt(s.bonus)}${s.bonusComm?' · '+s.bonusComm:''}</span>` : '';
     const compBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
-    rows += `<tr><td>${fmtDate(s.date)}</td><td>${s.shipDate ? fmtDate(s.shipDate) : (s.status==='Закрыта' ? '<span style="color:#c0392b;font-weight:500" title="Укажите дату отгрузки!">⚠️</span>' : '—')}</td><td>${compBadge}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td>₽${fmt(s.margin||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td>${bonusCell}</td><td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td></tr>`;
+    rows += `<tr><td>${fmtDate(s.date)}</td><td>${s.shipDate ? fmtDate(s.shipDate) : (s.status==='Закрыта' ? '<span style="color:#c0392b;font-weight:500" title="Укажите дату отгрузки!">⚠️</span>' : '—')}</td><td>${compBadge}</td><td>${s.client||''}</td><td>${s.tech||''}</td><td>₽${fmt(s.sum||0)}</td><td>₽${fmt(s.margin||0)}</td><td><span class="badge ${tc}">${s.type||''}</span></td><td><span class="badge ${sc}">${s.status||''}</span></td><td>${bonusCell}</td><td><button class="btn-edit" onclick="openEditModal('${saleHandle(s)}')">✏️</button></td></tr>`;
   });
   tb.innerHTML = rows;
 }
@@ -858,8 +915,15 @@ async function saveSale() {
     comm: document.getElementById('s-comm').value || '',
     ts: Date.now()
   };
-  db.sales.unshift(rec);
-  await saveDB();
+  const fingerprint = JSON.stringify({...rec, ts: 0});
+  if (!pendingSale || pendingSale.fingerprint !== fingerprint) {
+    pendingSale = {fingerprint, id: crypto.randomUUID()};
+  }
+  rec.id = pendingSale.id;
+  if (!await saveDB(data => {
+    if (!data.sales.some(s => s.id === rec.id)) data.sales.unshift(rec);
+  })) return;
+  pendingSale = null;
   const ok = document.getElementById('sale-ok');
   ok.style.display = 'block';
   setTimeout(() => ok.style.display = 'none', 3000);
@@ -913,7 +977,7 @@ function renderMyClientSearch() {
           <td>${s.tech||''}</td>
           <td>₽${fmt(s.sum||0)}</td>
           <td><span class="badge ${sc}">${s.status||''}</span></td>
-          <td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td>
+          <td><button class="btn-edit" onclick="openEditModal('${saleHandle(s)}')">✏️</button></td>
         </tr>`;
       }).join('') +
     `</tbody></table></div>`;
@@ -1377,7 +1441,7 @@ function renderAllSales() {
       <td><span class="badge ${tc}">${s.type||''}</span></td>
       <td><span class="badge ${sc}">${s.status||''}</span></td>
       <td>${bCell}</td>
-      <td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td>
+      <td><button class="btn-edit" onclick="openEditModal('${saleHandle(s)}')">✏️</button></td>
     </tr>`;
   }).join('');
   const closed = sales.filter(s => s.status === 'Закрыта');
@@ -1530,7 +1594,7 @@ function renderClientSearch() {
           <td>${s.tech||''}</td>
           <td>₽${fmt(s.sum||0)}</td>
           <td><span class="badge ${sc}">${s.status||''}</span></td>
-          <td><button class="btn-edit" onclick="openEditModal(${idx})">✏️</button></td>
+          <td><button class="btn-edit" onclick="openEditModal('${saleHandle(s)}')">✏️</button></td>
         </tr>`;
       }).join('') +
     `</tbody></table></div>`;
@@ -1582,7 +1646,7 @@ function toggleAVFieldsEdit() {
   calcMarginAutoEdit();
 }
 
-let editIdx = -1;
+let editRecord = null;
 
 function showNoShipDate() {
   const deals = db.sales.filter(s => s.status === 'Закрыта' && !s.shipDate);
@@ -1613,7 +1677,7 @@ function showNoShipDate() {
         <td>${s.client||'—'}</td>
         <td>${s.tech||'—'}</td>
         <td>₽${fmt(s.margin||0)}</td>
-        <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+        <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal('${saleHandle(s)}')">✏️</button></td>
       </tr>`;
     }).join('') + '</tbody></table></div>';
   }
@@ -1657,7 +1721,7 @@ function showMarginDeals(company) {
           <td>${s.tech||'—'}</td>
           <td>₽${fmt(s.sum||0)}</td>
           <td>₽${fmt(s.margin||0)}</td>
-          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal('${saleHandle(s)}')">✏️</button></td>
         </tr>`;
       }).join('') +
     '</tbody></table></div>';
@@ -1698,7 +1762,7 @@ function showAVDeals() {
           <td>${s.client||'—'}</td>
           <td>${s.tech||'—'}</td>
           <td>₽${fmt(s.margin||0)}</td>
-          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal('${saleHandle(s)}')">✏️</button></td>
         </tr>`;
       }).join('') +
     '</tbody></table></div>';
@@ -1747,7 +1811,7 @@ function showBonusDeals(half) {
           <td>${s.client||'—'}</td>
           <td>${s.tech||'—'}</td>
           <td>₽${fmt(s.bonus||0)}</td>
-          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal('${saleHandle(s)}')">✏️</button></td>
         </tr>`;
       }).join('') +
     '</tbody></table></div>';
@@ -1778,7 +1842,7 @@ function showReimburseDeals() {
             <td>${s.client||'—'}</td>
             <td>${s.tech||'—'}</td>
             <td>₽${fmt(s.reimburse||0)}</td>
-            <td><button class="btn" style="font-size:11px;padding:4px 8px" onclick="markReimbursed(${idx})">Возвращено</button></td>
+            <td><button class="btn" style="font-size:11px;padding:4px 8px" onclick="markReimbursed('${saleHandle(s)}')">Возвращено</button></td>
           </tr>`).join('');
       html += `<div style="margin-bottom:16px">
         <div style="font-weight:600;font-size:13px;margin-bottom:6px">${mgr ? mgr.name : mgrId} — ₽${fmt(total)}</div>
@@ -1799,10 +1863,9 @@ function showReimburseDeals() {
   document.getElementById('open-deals-modal').classList.add('on');
 }
 
-async function markReimbursed(idx) {
-  if (!db.sales[idx]) return;
-  db.sales[idx].reimbursed = true;
-  await saveDB();
+async function markReimbursed(handle) {
+  const before = saleFromHandle(handle);
+  if (!await saveDB(data => replaceSale(data, before, {...before, reimbursed: true}))) return;
   showReimburseDeals();
   renderBossMetrics();
 }
@@ -1841,7 +1904,7 @@ function showStaleDeals() {
         <td>${s.tech||'—'}</td>
         <td>₽${fmt(s.margin||0)}</td>
         <td style="color:#c0392b;font-weight:600">${days}</td>
-        <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+        <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal('${saleHandle(s)}')">✏️</button></td>
       </tr>`;
     }).join('') + '</tbody></table></div>';
   }
@@ -1881,7 +1944,7 @@ function showInvestorDeals() {
           <td>${s.client||'—'}</td>
           <td>${s.tech||'—'}</td>
           <td>₽${fmt(s.investorShare||0)}</td>
-          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal('${saleHandle(s)}')">✏️</button></td>
         </tr>`;
       }).join('') +
     '</tbody></table></div>';
@@ -1925,7 +1988,7 @@ function showOpenDeals() {
           <td>₽${fmt(s.sum||0)}</td>
           <td>₽${fmt(s.margin||0)}</td>
           <td><span class="badge ${sc}">${s.status}</span></td>
-          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal(${idx})">✏️</button></td>
+          <td><button class="btn-edit" onclick="closeOpenDeals();openEditModal('${saleHandle(s)}')">✏️</button></td>
         </tr>`;
       }).join('') +
     '</tbody></table></div>';
@@ -1937,10 +2000,9 @@ function closeOpenDeals() {
   document.getElementById('open-deals-modal').classList.remove('on');
 }
 
-function openEditModal(idx) {
-  const s = db.sales[idx];
-  if (!s) return;
-  editIdx = idx;
+function openEditModal(handle) {
+  const s = saleFromHandle(handle);
+  editRecord = clone(s);
   document.getElementById('e-company').value = s.company || 'КТ';
   document.getElementById('e-date').value = s.date || today();
   document.getElementById('e-client').value = s.client || '';
@@ -1973,13 +2035,14 @@ function openEditModal(idx) {
 
 function closeEditModal() {
   document.getElementById('edit-modal').classList.remove('on');
-  editIdx = -1;
+  editRecord = null;
 }
 
 async function saveEditSale() {
-  if (editIdx < 0) return;
-  db.sales[editIdx] = {
-    ...db.sales[editIdx],
+  if (!editRecord) return;
+  const before = clone(editRecord);
+  const updated = {
+    ...before,
     company: document.getElementById('e-company').value,
     date: document.getElementById('e-date').value,
     shipDate: document.getElementById('e-ship-date').value || '',
@@ -2001,7 +2064,8 @@ async function saveEditSale() {
     bonusComm: document.getElementById('e-status').value === 'Закрыта' ? (document.getElementById('e-bonus-comm').value || '') : '',
     comm: document.getElementById('e-comm').value || ''
   };
-  await saveDB();
+  if (!await saveDB(data => replaceSale(data, before, updated))) return;
+  editRecord = clone(updated);
   const ok = document.getElementById('edit-ok');
   ok.style.display = 'block';
   setTimeout(() => {
@@ -2026,6 +2090,7 @@ function renderPlansForm() {
   const [y, mo] = month.split('-');
   const el = document.getElementById('plans-form');
   if (!el) return;
+  plansBaseline = clone(db.plans || {});
   el.innerHTML = '<div style="font-size:12px;font-weight:500;color:#666;margin-bottom:10px">' + MONTHS_RU[parseInt(mo)-1] + ' ' + y + '</div>' +
     MANAGERS.map(m => {
       const plan = getMonthPlan(m.id, month);
@@ -2079,14 +2144,23 @@ function renderPlansProgress() {
 
 async function savePlans() {
   const month = currentMonth();
-  if (!db.plans) db.plans = {};
+  const changes = [];
   MANAGERS.forEach(m => {
     const key = m.id + '_' + month;
-    const valMargin = Number(document.getElementById('plan-margin-' + m.id).value || 0);
-    const valAV = Number(document.getElementById('plan-av-' + m.id).value || 0);
-    db.plans[key] = {margin: valMargin, av: valAV};
+    const before = plansBaseline[key] || {};
+    ['margin', 'av'].forEach(field => {
+      const value = Number(document.getElementById('plan-' + field + '-' + m.id).value || 0);
+      if (value !== Number(before[field] || 0)) changes.push({key, field, before: Number(before[field] || 0), value});
+    });
   });
-  await saveDB();
+  if (!await saveDB(data => {
+    changes.forEach(({key, field, before, value}) => {
+      const plan = data.plans[key] || {};
+      if (Number(plan[field] || 0) !== before) throw new Error('Этот план уже изменён другим руководителем. Откройте вкладку «Планы» заново и сверьте значения.');
+      data.plans[key] = {...plan, [field]: value};
+    });
+  })) return;
+  renderPlansForm();
   const ok = document.getElementById('plans-ok');
   ok.style.display = 'block';
   setTimeout(() => ok.style.display = 'none', 3000);
@@ -2102,8 +2176,8 @@ async function init() {
   }
   buildLogin();
   setInterval(async () => {
-    if (!currentUser) return;
-    await loadDB();
+    if (!currentUser || saving) return;
+    if (!await loadDB()) return;
     if (currentUser === 'boss') {
       renderBossMetrics();
           renderBossAdsToday();
