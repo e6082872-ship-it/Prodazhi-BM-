@@ -2397,7 +2397,7 @@ async function showProtectionHistory(){
 init=async function(){
   buildProfileLanding();
   try{
-    secureAuth=await import('./auth.js?v=3594abcf9957');
+    secureAuth=await import('./auth.js?v=42d60fe8d266');
     secureAuth.boot(result=>{
       db=normalizeDB(result.data);
       if(selectedProfile)chooseProfile(selectedProfile);else buildProfileLanding();

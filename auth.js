@@ -55,7 +55,7 @@ export async function login() {
     else if(e.code==='auth/network-request-failed')message('Не удалось связаться с сервисом входа. Проверьте соединение и повторите.');
     else message('Не удалось войти. Проверьте рабочую почту и пароль, который создали для дашборда.');
   }finally{
-    document.getElementById('auth-password').value='';
+    const passwordField=document.getElementById('auth-password');if(passwordField)passwordField.value='';
     if(button){button.disabled=false;button.textContent='Войти';}
     signingIn=false;
   }

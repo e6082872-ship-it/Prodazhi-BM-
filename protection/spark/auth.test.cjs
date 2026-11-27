@@ -25,3 +25,6 @@ test('an existing verified session opens the permitted profile without another p
 test('remembered session without an enabled grant cannot open the dashboard',async()=>{
  const p=page({access:{enabled:false,profile:'boss'}});let opened=false;p.context.ready=()=>opened=true;p.context.clear=()=>{};p.run('boot(ready,clear)');await p.context.authChanged({uid:'synthetic-owner',emailVerified:true,getIdToken:async()=> 'synthetic-token'});assert.equal(opened,false);assert.ok(p.el('auth-message').textContent.includes('Доступ не выдан'));
 });
+test('returning to the profile cards during login does not break later login attempts',async()=>{
+ let release;const waiting=new Promise(r=>release=r);let first=true;const p=page({signIn:()=>{if(first){first=false;return waiting;}}});const attempt=p.run('login()');await new Promise(r=>setImmediate(r));const original=p.context.document.getElementById;p.context.document.getElementById=id=>id==='auth-password'?null:original(id);release();await attempt;p.context.document.getElementById=original;p.el('auth-password').value='Synthetic-only-password';await p.run('login()');assert.equal(p.events.filter(e=>e[0]==='signin').length,2);
+});
