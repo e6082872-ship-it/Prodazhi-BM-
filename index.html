@@ -2246,8 +2246,10 @@ function authForm(){
   document.getElementById('login-list').innerHTML=`<form onsubmit="event.preventDefault();secureAuth.login()" style="max-width:400px;margin:auto">
     <div class="fl"><label for="auth-email">Рабочая почта</label><input type="email" id="auth-email" autocomplete="username" required></div>
     <div class="fl"><label for="auth-password">Пароль</label><input type="password" id="auth-password" autocomplete="current-password" required></div>
+    <label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:14px"><input type="checkbox" id="auth-remember" checked style="width:auto;margin:0"> Запомнить вход на этом устройстве</label>
+    <p style="font-size:13px;color:#666;line-height:1.5">После первого входа кабинет будет открываться автоматически в этом браузере. Кнопка «Выйти» завершает сохранённый вход.</p>
     <p id="auth-message" role="status">Войдите по рабочей почте и паролю.</p>
-    <button class="btn btn-p" type="submit">Войти</button>
+    <button class="btn btn-p" id="auth-submit" type="submit">Войти</button>
     <button class="btn" type="button" onclick="secureAuth.resetPassword()">Получить / сбросить пароль</button>
     <button class="btn" type="button" onclick="secureAuth.verifyEmail()">Подтвердить почту</button>
     <button class="btn" type="button" onclick="secureAuth.checkVerification()">Проверить подтверждение</button>

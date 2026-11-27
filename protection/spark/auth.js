@@ -1,10 +1,10 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
-import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,sendPasswordResetEmail,sendEmailVerification,reload} from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js';
+import {getAuth,setPersistence,browserLocalPersistence,browserSessionPersistence,signInWithEmailAndPassword,signOut,onAuthStateChanged,sendPasswordResetEmail,sendEmailVerification,reload} from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js';
 import * as databaseSdk from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
 import {createStore} from './store.mjs';
 import {firebaseConfig} from './config.js';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),database=databaseSdk.getDatabase(app);
-let onReady=()=>{},onClear=()=>{},identity=null,epoch=0,store=null;
+let onReady=()=>{},onClear=()=>{},identity=null,epoch=0,store=null,signingIn=false;
 const message = text => {const el=document.getElementById('auth-message');if(el)el.textContent=text;};
 export const getIdentity = () => identity;
 export async function read(){if(!store)throw Error('Войдите заново.');return store.read();}
@@ -36,12 +36,29 @@ export function boot(ready,clear) {
   onAuthStateChanged(auth,user=>activate(user));
 }
 export async function login() {
+  if(signingIn)return;
+  signingIn=true;
+  const button=document.getElementById('auth-submit');
+  if(button){button.disabled=true;button.textContent='Входим…';}
+  let settingPersistence=true;
   try {
     const email=document.getElementById('auth-email').value.trim();
     const password=document.getElementById('auth-password').value;
+    const remember=document.getElementById('auth-remember')?.checked!==false;
+    message('Проверяем вход…');
+    await setPersistence(auth,remember?browserLocalPersistence:browserSessionPersistence);
+    settingPersistence=false;
     await signInWithEmailAndPassword(auth,email,password);
-  }catch{message('Не удалось войти. Проверьте почту и пароль.');}
-  finally{document.getElementById('auth-password').value='';}
+  }catch(e){
+    if(settingPersistence)message('Браузер не разрешил сохранить вход. Разрешите хранение данных сайта или снимите галочку «Запомнить вход» и повторите.');
+    else if(e.code==='auth/too-many-requests')message('Слишком много попыток входа. Подождите и повторите позже.');
+    else if(e.code==='auth/network-request-failed')message('Не удалось связаться с сервисом входа. Проверьте соединение и повторите.');
+    else message('Не удалось войти. Проверьте рабочую почту и пароль, который создали для дашборда.');
+  }finally{
+    document.getElementById('auth-password').value='';
+    if(button){button.disabled=false;button.textContent='Войти';}
+    signingIn=false;
+  }
 }
 export async function logout(){epoch++;store?.close();store=null;identity=null;await signOut(auth);}
 export async function resetPassword(){
