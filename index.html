@@ -184,7 +184,7 @@ tr:last-child td{border-bottom:none}
       <div style="font-size:11px;color:#888;margin:12px 0 8px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Техника и сделка</div>
       <div class="fgrid" style="margin-bottom:0">
         <div class="fl"><label>Тип оплаты</label><select id="s-type" onchange="toggleAVFields()"><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select></div>
-        <div class="fl span2"><label>Техника</label><input type="text" id="s-tech" placeholder="Марка, модель, год"></div>
+        <div class="fl"><label for="s-vin">VIN</label><input id="s-vin" maxlength="17" placeholder="17 символов"></div><div class="fl"><label for="s-stock-no">Внутренний номер машины</label><input id="s-stock-no" maxlength="80" placeholder="Укажите, если VIN неизвестен"></div><div class="fl span2"><label>Техника</label><input type="text" id="s-tech" placeholder="Марка, модель, год"></div>
         <div class="fl"><label>Цена продажи, ₽</label><input type="number" min="0" step="1000" id="s-sum" placeholder="0" oninput="calcMarginAuto()"></div>
         <div class="fl" id="s-purchase-wrap"><label>Цена покупки, ₽</label><input type="number" min="0" step="1000" id="s-purchase" placeholder="0" oninput="calcMarginAuto()"></div>
         <div class="fl"><label>Дата покупки</label><input type="date" id="s-date"></div>
@@ -224,7 +224,7 @@ tr:last-child td{border-bottom:none}
 
 <div id="s-boss" class="screen">
   <div class="topbar">
-    <div class="topbar-title">Дашборд руководителя</div>
+    <div class="topbar-title">Дашборд руководителя</div><button class="btn" onclick="showProtectionHistory()">История и корзина</button><button class="btn" onclick="secureAuth.downloadBackup().catch(e=>showProtectionMessage(e.message))">Скачать резервную копию</button>
     <div style="display:flex;align-items:center;gap:6px">
       <div class="avatar av-boss" style="width:30px;height:30px;font-size:10px">РУ</div>
       <span class="sync-dot" id="boss-sync"></span>
@@ -399,7 +399,7 @@ tr:last-child td{border-bottom:none}
 <div class="modal-overlay" id="edit-modal">
   <div class="modal">
     <div class="modal-title">
-      <span>Редактировать сделку</span>
+      <span>Редактировать сделку</span><button type="button" id="trash-current-sale" class="btn" onclick="trashCurrentSale()" hidden>В корзину</button>
       <button class="modal-close" onclick="closeEditModal()">×</button>
     </div>
     <div class="fgrid">
@@ -407,7 +407,7 @@ tr:last-child td{border-bottom:none}
       <div class="fl"><label>Клиент</label><input type="text" id="e-client" placeholder="ООО / ИП / ФИО"></div>
       <div class="fl"><label>Имя контакта</label><input type="text" id="e-contact-name" placeholder="Имя менеджера/владельца"></div>
       <div class="fl"><label>Телефон</label><input type="text" id="e-contact-phone" placeholder="+7..."></div>
-      <div class="fl span2"><label>Техника</label><input type="text" id="e-tech" placeholder="Марка, модель"></div>
+      <div class="fl"><label for="e-vin">VIN</label><input id="e-vin" maxlength="17" placeholder="17 символов"></div><div class="fl"><label for="e-stock-no">Внутренний номер машины</label><input id="e-stock-no" maxlength="80" placeholder="Укажите, если VIN неизвестен"></div><div class="fl span2"><label>Техника</label><input type="text" id="e-tech" placeholder="Марка, модель"></div>
       <div class="fl"><label>Тип оплаты</label><select id="e-type" onchange="toggleAVFieldsEdit()"><option>Наличные</option><option>Безнал</option><option>Лизинг</option><option>АВ</option></select></div>
       <div class="fl"><label>Цена продажи, ₽</label><input type="number" min="0" step="1000" id="e-sum" placeholder="0" oninput="calcMarginAutoEdit()"></div>
       <div class="fl" id="e-purchase-wrap"><label>Цена покупки, ₽</label><input type="number" min="0" step="1000" id="e-purchase" placeholder="0" oninput="calcMarginAutoEdit()"></div>
@@ -432,9 +432,9 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<div id="protection-message" role="status" hidden style="position:fixed;bottom:12px;left:12px;right:12px;background:#fff3d6;padding:12px;border:1px solid #d69b16;z-index:2000" onclick="this.hidden=true"></div>
+<div class="modal-overlay" id="protection-history"><div class="modal" style="max-width:900px"><div class="modal-title"><span>История изменений и корзина</span><button class="modal-close" onclick="document.getElementById('protection-history').classList.remove('on')">×</button></div><div id="protection-history-content"></div></div></div>
 <script>
-const DB_URL = 'https://bm-avto-default-rtdb.firebaseio.com/dashboard.json';
-const BOSS_PIN = '2026'; // PIN для входа в режим руководителя — поменяйте на свой
 
 const MANAGERS = [
   {id:'ilya',  name:'Илья',    cls:'av-a', color:'#185FA5', plan:6000000},
@@ -480,61 +480,8 @@ function replaceSale(data, before, after) {
   data.sales[matches[0]] = after;
 }
 
-async function loadDB() {
-  const revision = dbRevision;
-  try {
-    const r = await fetch(DB_URL, {cache: 'no-store'});
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = normalizeDB(await r.json());
-    if (saving || revision !== dbRevision) return false;
-    db = data;
-    return true;
-  } catch(e) {
-    setSyncDot('err');
-    return false;
-  }
-}
-
-// Транзакция: применяем только данное действие к свежим данным.
-// If-Match не позволяет записать снимок, если сервер уже изменился.
-async function saveDB(change) {
-  if (saving) {
-    alert('Дождитесь завершения предыдущего сохранения и повторите действие.');
-    return false;
-  }
-  saving = true;
-  dbRevision++;
-  setSyncDot('loading');
-  try {
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const r = await fetch(DB_URL, {headers: {'X-Firebase-ETag': 'true'}, cache: 'no-store'});
-      if (!r.ok) throw new Error('Ошибка чтения: HTTP ' + r.status);
-      const etag = r.headers.get('ETag');
-      if (!etag) throw new Error('Сервер не подтвердил версию данных.');
-      const latest = normalizeDB(await r.json());
-      change(latest);
-      const result = await fetch(DB_URL, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json', 'if-match': etag},
-        body: JSON.stringify(latest)
-      });
-      if (result.status === 412) continue;
-      if (!result.ok) throw new Error('Ошибка записи: HTTP ' + result.status);
-      db = latest;
-      setSyncDot('ok');
-      setTimeout(() => { if (!saving) setSyncDot('idle'); }, 3000);
-      return true;
-    }
-    throw new Error('Данные часто обновляются другими сотрудниками. Повторите сохранение.');
-  } catch(e) {
-    setSyncDot('err');
-    alert('Сохранение не подтверждено. ' + e.message + '\nДанные в форме сохранены. При обрыве связи проверьте список перед повторной отправкой.');
-    return false;
-  } finally {
-    saving = false;
-    dbRevision++;
-  }
-}
+let loadDB = async () => false;
+let saveDB = async () => false;
 
 function setSyncDot(state) {
   ['mgr-sync','boss-sync'].forEach(id => {
@@ -764,18 +711,7 @@ function closeBossLogin() {
   clearBossLoginError();
   if (bossLoginTrigger) bossLoginTrigger.focus();
 }
-function submitBossLogin() {
-  const input = document.getElementById('boss-pin');
-  if (input.value.trim() !== BOSS_PIN) {
-    document.getElementById('boss-login-error').style.display = 'block';
-    input.setAttribute('aria-invalid', 'true');
-    input.focus();
-    input.select();
-    return;
-  }
-  closeBossLogin();
-  login('boss');
-}
+function submitBossLogin() {}
 
 function logout() {
   currentUser = null;
@@ -848,6 +784,7 @@ async function saveDay() {
     data.activity.unshift(rec);
   })) return;
   dayBaseline = clone(rec);
+  window.bmDrafts.clearSaved('d-');
   const ok = document.getElementById('day-ok');
   ok.style.display = 'block';
   setTimeout(() => ok.style.display = 'none', 3000);
@@ -948,6 +885,8 @@ async function saveSale() {
     contactName: document.getElementById('s-contact-name').value || '',
     contactPhone: document.getElementById('s-contact-phone').value || '',
     tech: document.getElementById('s-tech').value,
+    vin: document.getElementById('s-vin').value.trim().toUpperCase(),
+    stockNo: document.getElementById('s-stock-no').value.trim().toUpperCase(),
     sum: Number(document.getElementById('s-sum').value || 0),
     purchase: Number(document.getElementById('s-purchase').value || 0),
     expense: Number(document.getElementById('s-expense').value || 0),
@@ -972,6 +911,9 @@ async function saveSale() {
     if (!data.sales.some(s => s.id === rec.id)) data.sales.unshift(rec);
   })) return;
   pendingSale = null;
+  window.bmDrafts.clearSaved('s-');
+  document.getElementById('s-vin').value='';
+  document.getElementById('s-stock-no').value='';
   const ok = document.getElementById('sale-ok');
   ok.style.display = 'block';
   setTimeout(() => ok.style.display = 'none', 3000);
@@ -2098,6 +2040,8 @@ async function saveEditSale() {
     contactName: document.getElementById('e-contact-name').value || '',
     contactPhone: document.getElementById('e-contact-phone').value || '',
     tech: document.getElementById('e-tech').value,
+    vin: document.getElementById('e-vin').value.trim().toUpperCase(),
+    stockNo: document.getElementById('e-stock-no').value.trim().toUpperCase(),
     sum: Number(document.getElementById('e-sum').value || 0),
     margin: Number(document.getElementById('e-margin').value || 0),
     type: document.getElementById('e-type').value,
@@ -2114,6 +2058,7 @@ async function saveEditSale() {
   };
   if (!await saveDB(data => replaceSale(data, before, updated))) return;
   editRecord = clone(updated);
+  window.bmDrafts.resetDirty();
   const ok = document.getElementById('edit-ok');
   ok.style.display = 'block';
   setTimeout(() => {
@@ -2241,6 +2186,192 @@ async function init() {
     }
   }, 30000);
 }
+
+// Authenticated profile is the only source of ownership. Drafts stay in this browser session.
+(() => {
+  const fields = () => [...document.querySelectorAll('#t-sales input, #t-sales select, #t-sales textarea, #t-day input, #t-day textarea')];
+  const key = profile => 'bm-draft-v2:'+profile;
+  const reset = () => {
+    for(const el of fields()) {
+      if(el.tagName==='SELECT')el.selectedIndex=0;
+      else if(el.type==='checkbox')el.checked=false;
+      else el.value='';
+    }
+  };
+  let dirty=false;
+  window.bmDrafts={
+    beforeChange(){if(currentUser && currentUser!=='boss')this.persist();reset();dirty=false;},
+    persist(){
+      if(!currentUser || currentUser==='boss')return;
+      const values=Object.fromEntries(fields().map(el=>[el.id,el.type==='checkbox'?el.checked:el.value]));
+      try{sessionStorage.setItem(key(currentUser),JSON.stringify({values,day:today()}));}catch{}
+    },
+    restore(profile){
+      try{
+        const draft=JSON.parse(sessionStorage.getItem(key(profile))||'null');
+        if(!draft)return;
+        for(const el of fields()) {
+          if(el.id.startsWith('d-') && draft.day!==today())continue;
+          if(Object.prototype.hasOwnProperty.call(draft.values,el.id))el.value=draft.values[el.id];
+        }
+      }catch{}
+    },
+    clearSaved(prefix){
+      try{
+        const draft=JSON.parse(sessionStorage.getItem(key(currentUser))||'null');
+        if(draft){for(const name of Object.keys(draft.values))if(name.startsWith(prefix))delete draft.values[name];sessionStorage.setItem(key(currentUser),JSON.stringify(draft));}
+      }catch{}
+    },
+    isDirty:()=>dirty,
+    resetDirty:()=>{dirty=false;}
+  };
+  document.addEventListener('input',event=>{
+    if(event.target.closest('#edit-modal'))dirty=true;
+    if(event.target.closest('#t-sales, #t-day'))window.bmDrafts.persist();
+  });
+  document.addEventListener('change',event=>{if(event.target.closest('#t-sales, #t-day'))window.bmDrafts.persist();});
+  window.addEventListener('beforeunload',event=>{
+    window.bmDrafts.persist();
+    if(dirty||saving){event.preventDefault();event.returnValue='';}
+  });
+})();
+
+let secureAuth,secureOperation=null,secureAuthEpoch=0;
+function safeText(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function showProtectionMessage(message){
+  const el=document.getElementById('protection-message');
+  el.textContent=message;el.hidden=false;
+}
+function authForm(){
+  document.getElementById('login-list').innerHTML=`<form onsubmit="event.preventDefault();secureAuth.login()" style="max-width:400px;margin:auto">
+    <div class="fl"><label for="auth-email">Рабочая почта</label><input type="email" id="auth-email" autocomplete="username" required></div>
+    <div class="fl"><label for="auth-password">Пароль</label><input type="password" id="auth-password" autocomplete="current-password" required></div>
+    <p id="auth-message" role="status">Войдите по рабочей почте и паролю.</p>
+    <button class="btn btn-p" type="submit">Войти</button>
+    <button class="btn" type="button" onclick="secureAuth.resetPassword()">Получить / сбросить пароль</button>
+    <button class="btn" type="button" onclick="secureAuth.verifyEmail()">Подтвердить почту</button>
+    <button class="btn" type="button" onclick="secureAuth.checkVerification()">Проверить подтверждение</button>
+  </form>`;
+}
+loadDB=async function(){
+  if(!secureAuth?.getIdentity())return false;
+  const revision=dbRevision,epoch=secureAuthEpoch;
+  try{
+    const result=await secureAuth.read();
+    if(saving||revision!==dbRevision||epoch!==secureAuthEpoch)return false;
+    db=normalizeDB(result.data);return true;
+  }catch(e){setSyncDot('err');showProtectionMessage(e.message);return false;}
+};
+saveDB=async function(change){
+  if(saving){showProtectionMessage('Дождитесь предыдущего сохранения.');return false;}
+  const identity=secureAuth?.getIdentity();
+  if(!identity || identity.profile!==currentUser){showProtectionMessage('Войдите заново в свой профиль.');return false;}
+  saving=true;dbRevision++;setSyncDot('loading');
+  const epoch=secureAuthEpoch;
+  try{
+    const before=clone(db),after=clone(db);change(after);
+    const body={action:'save',before,after};
+    const fingerprint=JSON.stringify(body);
+    if(!secureOperation || secureOperation.fingerprint!==fingerprint)secureOperation={fingerprint,id:crypto.randomUUID()};
+    const result=await secureAuth.save({...body,id:secureOperation.id});
+    if(epoch!==secureAuthEpoch)throw new Error('Профиль изменился. Откройте свой кабинет заново.');
+    db=normalizeDB(result.data);secureOperation=null;setSyncDot('ok');return true;
+  }catch(e){setSyncDot('err');showProtectionMessage('Сохранение не подтверждено. '+e.message+' Введённые данные остаются в форме.');return false;}
+  finally{saving=false;dbRevision++;}
+};
+buildLogin=authForm;
+login=function(profile){
+  if(secureAuth?.getIdentity()?.profile!==profile){showProtectionMessage('Нет доступа к этому профилю.');return;}
+  currentUser=profile;show('s-login',false);
+  if(profile==='boss'){show('s-boss',true);buildBoss();}
+  else{show('s-mgr',true);buildMgr(profile);window.bmDrafts.restore(profile);}
+};
+loginBoss=function(){showProtectionMessage('Для руководителя используется личный вход по почте.');};
+submitBossLogin=function(){loginBoss();};
+logout=async function(){
+  if(saving){showProtectionMessage('Дождитесь завершения сохранения.');return;}
+  if(window.bmDrafts.isDirty()&&!confirm('В форме редактирования есть несохранённые изменения. Выйти без сохранения?'))return;
+  await secureAuth.logout();
+};
+const originalOpenEdit=openEditModal, originalCloseEdit=closeEditModal;
+openEditModal=function(handle){
+  originalOpenEdit(handle);const s=saleFromHandle(handle);
+  document.getElementById('e-vin').value=s.vin||'';
+  document.getElementById('e-stock-no').value=s.stockNo||'';
+  window.bmDrafts.resetDirty();
+  document.getElementById('trash-current-sale').hidden=currentUser!=='boss';
+};
+closeEditModal=function(){
+  if(window.bmDrafts.isDirty()&&!confirm('Закрыть без сохранения изменений?'))return;
+  window.bmDrafts.resetDirty();originalCloseEdit();
+};
+async function trashCurrentSale(){
+  if(currentUser!=='boss'||!editRecord)return;
+  if(!confirm('Переместить сделку в корзину? Она исчезнет из итогов; её можно восстановить.'))return;
+  const before=clone(editRecord);
+  if(!await saveDB(data=>{
+    const i=data.sales.findIndex(s=>s.id===before.id);
+    if(i<0||!same(data.sales[i],before))throw new Error('Сделка изменена. Откройте её заново.');
+    data.sales.splice(i,1);
+  }))return;
+  window.bmDrafts.resetDirty();closeEditModal();buildBoss();
+}
+async function showProtectionHistory(){
+  if(currentUser!=='boss')return;
+  try{
+    const result=await secureAuth.history();
+    const content=document.getElementById('protection-history-content');
+    content.innerHTML='<h3>Корзина</h3>';
+    const trash=Object.entries(result.trash);
+    if(!trash.length)content.insertAdjacentHTML('beforeend','<p>Корзина пуста.</p>');
+    for(const [id,item] of trash){
+      const row=document.createElement('p');
+      row.textContent=`${item.record.client||'Без клиента'} · ${item.record.tech||''} · ₽${fmt(item.record.sum||0)} `;
+      const button=document.createElement('button');button.className='btn';button.textContent='Восстановить';
+      button.onclick=async()=>{
+        button.disabled=true;
+        try{
+          const restored=await secureAuth.save({id:crypto.randomUUID(),action:'restore',saleId:id});
+          db=normalizeDB(restored.data);buildBoss();await showProtectionHistory();
+        }catch(e){button.disabled=false;showProtectionMessage(e.message);}
+      };
+      row.append(button);content.append(row);
+    }
+    content.insertAdjacentHTML('beforeend','<h3>Последние 200 изменений</h3>');
+    for(const event of result.history){
+      const details=document.createElement('details'),summary=document.createElement('summary');
+      summary.textContent=new Date(event.at).toLocaleString('ru-RU')+' · '+event.actor.email+' · '+event.changes.map(c=>c.kind).join(', ');
+      const pre=document.createElement('pre');pre.style.whiteSpace='pre-wrap';pre.textContent=JSON.stringify(event.changes,null,2);
+      details.append(summary,pre);content.append(details);
+    }
+    document.getElementById('protection-history').classList.add('on');
+  }catch(e){showProtectionMessage(e.message);}
+}
+init=async function(){
+  authForm();
+  try{
+    secureAuth=await import('./auth.js');
+    secureAuth.boot(result=>{
+      db=normalizeDB(result.data);login(result.profile);
+    },()=>{
+      secureAuthEpoch++;window.bmDrafts.beforeChange();currentUser=null;secureOperation=null;
+      db={sales:[],activity:[],plans:{}};editRecord=null;dbRevision++;
+      ['s-mgr','s-boss','edit-modal','protection-history'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});
+      for(const id of ['my-sales-body','my-metrics','stat-content','day-history','my-client-search-results','boss-metrics','boss-ranking','boss-insights','all-sales-body','all-sales-total','activity-body','team-grid','client-search-results','plans-form','plans-progress','protection-history-content']) {
+        const el=document.getElementById(id);if(el)el.replaceChildren();
+      }
+      document.querySelectorAll('#edit-modal input, #edit-modal textarea').forEach(el=>{el.value='';});
+      show('s-login',true);
+      document.getElementById('boss-pin').value='';
+    });
+    setInterval(async()=>{
+      if(!currentUser||saving||!await loadDB())return;
+      if(currentUser==='boss'){
+        renderBossMetrics();renderBossRanking();renderAllSales();renderActivity();buildTeamGrid();
+      }else{renderMyMetrics(currentUser);renderDayHistory(currentUser);renderMySales(currentUser);}
+    },30000);
+  }catch{document.getElementById('auth-message').textContent='Защищённый вход ещё не настроен. Обратитесь к руководителю.';}
+};
 
 init();
 </script>

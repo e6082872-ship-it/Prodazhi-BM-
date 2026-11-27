@@ -47,7 +47,7 @@ export async function logout(){epoch++;store?.close();store=null;identity=null;a
 export async function resetPassword(){
   const email=document.getElementById('auth-email').value.trim();
   if(!email){message('Сначала введите рабочую почту.');return;}
-  try{await sendPasswordResetEmail(auth,email);message('Если для этой почты создан аккаунт, придёт письмо для установки пароля.');}
+  try{await sendPasswordResetEmail(auth,email);message('Запрос принят. Проверьте «Входящие» и «Спам» в указанной почте. Пароль задаётся по ссылке из письма. Если письма нет, обратитесь к руководителю.');}
   catch{message('Не удалось отправить письмо. Повторите позже.');}
 }
 export async function verifyEmail(){

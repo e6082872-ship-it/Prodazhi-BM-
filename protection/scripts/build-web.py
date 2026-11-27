@@ -3,7 +3,8 @@ import re
 import sys
 import shutil
 root=Path(__file__).resolve().parents[2]
-s=(root/'index.html').read_text()
+template=root/'protection/legacy/index.html'
+s=(template if template.exists() else root/'index.html').read_text()
 s=re.sub(r"const DB_URL = .*?;\n",'',s)
 s=re.sub(r"const BOSS_PIN = .*?\n",'',s)
 # Remove direct database traffic; the secure bridge supplies authenticated functions.

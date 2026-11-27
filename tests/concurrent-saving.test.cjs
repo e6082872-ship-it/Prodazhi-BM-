@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const {randomUUID} = require('node:crypto');
-const source = fs.readFileSync(require('node:path').join(__dirname, '../index.html'), 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1].replace(/\ninit\(\);\s*$/, '');
+const source = fs.readFileSync(require('node:path').join(__dirname, '../protection/legacy/index.html'), 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1].replace(/\ninit\(\);\s*$/, '');
 const copy = x => JSON.parse(JSON.stringify(x));
 function server(initial = {sales: [], activity: [], plans: {}}) {
   let data = copy(initial), version = 0;
