@@ -1827,7 +1827,7 @@ function showMarginDeals(company) {
   const m = currentMonth();
   let deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.type !== 'АВ'), m);
   if (company) deals = deals.filter(s => (s.company||'КТ') === company);
-  deals.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  deals.sort((a,b) => (b.shipDate||'').localeCompare(a.shipDate||''));
   const title = company ? `Маржа ${company} — сделки` : 'Маржа (всего) — сделки';
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = title;
   const el = document.getElementById('open-deals-content');
@@ -1838,7 +1838,7 @@ function showMarginDeals(company) {
     el.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:10px">Всего: ${deals.length} сделок, маржа ₽${fmt(totalMarg)}</div>
     <div style="overflow-x:auto"><table>
       <thead><tr>
-        <th style="width:50px">Дата</th>
+        <th style="width:95px">Дата закрытия</th>
         <th style="width:35px">Комп.</th>
         <th style="width:65px">Менеджер</th>
         <th style="width:90px">Клиент</th>
@@ -1853,7 +1853,7 @@ function showMarginDeals(company) {
         const mgr = mgrById(s.mgr);
         const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
         return `<tr>
-          <td>${fmtDate(s.date)}</td>
+          <td>${s.shipDate ? fmtDate(s.shipDate) : 'Не указана'}</td>
           <td>${cBadge}</td>
           <td>${mgr ? mgr.name : s.mgr}</td>
           <td>${s.client||'—'}</td>
