@@ -46,7 +46,9 @@ for prefix in ['s','e']:
  s=s[:tag.start()]+fields+s[tag.start():]
 s=s.replace("  const ok = document.getElementById('sale-ok');", "  window.bmDrafts.clearSaved('s-');\n  document.getElementById('s-vin').value='';\n  document.getElementById('s-stock-no').value='';\n  const ok = document.getElementById('sale-ok');")
 s=s.replace("  const ok = document.getElementById('day-ok');", "  window.bmDrafts.clearSaved('d-');\n  const ok = document.getElementById('day-ok');")
-s=s.replace('  editRecord = clone(updated);','  editRecord = clone(updated);\n  window.bmDrafts.resetDirty();')
+saved_edit='  editRecord = clone(db.sales.find(s => s.id === updated.id) || updated);'
+assert saved_edit in s
+s=s.replace(saved_edit,saved_edit+'\n  window.bmDrafts.resetDirty();')
 s=s.replace('    <div class="topbar-title">Дашборд руководителя</div>','    <div class="topbar-title">Дашборд руководителя</div><button class="btn" onclick="showProtectionHistory()">История и корзина</button>')
 s=s.replace('<span>Редактировать сделку</span>','<span>Редактировать сделку</span><button type="button" id="trash-current-sale" class="btn" onclick="trashCurrentSale()" hidden>В корзину</button>')
 team_screen='<div id="s-team-finance" class="screen"><div class="topbar"><div class="topbar-title">Обзор команды</div><span class="badge bb">Только просмотр</span><button class="btn" onclick="chooseProfile(secureAuth.getIdentity()?.profile)">Мой кабинет</button><button class="btn" onclick="goStartScreen()">Профили</button></div><div class="card"><label for="team-finance-month">Период: </label><select id="team-finance-month" onchange="renderTeamFinance()" style="max-width:250px"></select></div><div class="card"><label for="team-finance-manager">Менеджер: </label><select id="team-finance-manager" onchange="renderTeamFinance()" style="max-width:250px"><option value="">Все менеджеры</option></select></div><div id="team-finance-content"></div></div>'

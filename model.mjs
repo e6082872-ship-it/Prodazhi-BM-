@@ -20,7 +20,7 @@ export function differences(before,after){
  }
  if(changes.length>100)throw Error('Слишком много изменений одновременно.');return changes;
 }
-export const teamSaleFields=['id','mgr','company','date','shipDate','client','tech','sum','margin','type','status','bonus','reimburse','reimbursed','investorShare','investorPaid','ts'];
+export const teamSaleFields=['id','mgr','company','date','shipDate','client','tech','sum','margin','type','status','bonus','reimburse','reimbursed','investorShare','investorPaid','ts','statusChangedAt'];
 export function projectTeamSale(sale){return Object.fromEntries(teamSaleFields.filter(key=>sale[key]!==undefined&&sale[key]!==null).map(key=>[key,sale[key]]));}
 export function buildTeamView(profiles){
  const result={enabled:true,sales:{},plans:{}};
@@ -41,11 +41,18 @@ export function makeUpdates(profiles,claims,changes,actor,op,timestamp,publishTe
   if(c.kind==='plans'&&c.after)c.after={...c.after,margin:c.after.margin??0,av:c.after.av??0};
   if(actor.profile!=='boss'&&(actor.profile!==c.profile||c.kind==='plans'||!c.after))throw Error('Недостаточно прав.');
   const record=profiles?.[c.profile]?.[c.kind]?.[c.id],v=current(record);
-  if(v?.op===op&&equal(v.deleted?null:v.payload,c.after))continue;
+  const intent=p=>c.kind==='sales'&&p?Object.fromEntries(Object.entries(p).filter(([key])=>key!=='statusChangedAt')):p;
+  if(v?.op===op&&equal(intent(v.deleted?null:v.payload),intent(c.after)))continue;
   if(!equal(v?.deleted?null:v?.payload,c.before))throw Error('Запись уже изменена. Откройте её заново и сверяйте данные.');
   const head=(record?.head||0)+1,path=`spark/profiles/${c.profile}/${c.kind}/${c.id}`;
-  const payload=c.after||c.before;
+  let payload=c.after||c.before;
   if(!payload)throw Error('Нет записи для сохранения.');
+  if(c.kind==='sales'&&c.after){
+   payload={...payload};
+   if(!v||v.deleted||v.payload.status!==payload.status)payload.statusChangedAt=timestamp;
+   else if(v.payload.statusChangedAt!==undefined)payload.statusChangedAt=v.payload.statusChangedAt;
+   else delete payload.statusChangedAt;
+  }
   if(c.kind==='sales'&&c.after&&payload.type!=='АВ'){
    for(const field of ['vin','stockNo'])if(payload[field]){
     const key=payload[field];if(!(field==='vin'?/^[A-HJ-NPR-Z0-9]{17}$/:/^[A-Z0-9_-]{1,80}$/).test(key))throw Error(field==='vin'?'Проверьте VIN: нужно 17 символов.':'Внутренний номер: латинские буквы, цифры, дефис или подчёркивание.');
@@ -55,7 +62,7 @@ export function makeUpdates(profiles,claims,changes,actor,op,timestamp,publishTe
   }
   updates[path+'/head']=head;
   updates[path+'/versions/'+head]={uid:actor.uid,at:timestamp,op,deleted:!c.after,payload};
-  if(publishTeam&&(c.kind==='sales'||c.kind==='plans'))updates[`spark/teamView/${c.kind}/${c.profile}/${c.id}`]=c.after?(c.kind==='sales'?projectTeamSale(c.after):{margin:c.after.margin,av:c.after.av}):null;
+  if(publishTeam&&(c.kind==='sales'||c.kind==='plans'))updates[`spark/teamView/${c.kind}/${c.profile}/${c.id}`]=c.after?(c.kind==='sales'?projectTeamSale(payload):{margin:c.after.margin,av:c.after.av}):null;
  }
  return updates;
 }

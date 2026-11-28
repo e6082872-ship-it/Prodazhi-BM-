@@ -5,7 +5,7 @@ access="auth != null && auth.token.email_verified == true && root.child('spark/a
 role="root.child('spark/access').child(auth.uid).child('profile').val()"
 boss=role+" == 'boss'"
 allowed=access+" && ("+boss+" || "+role+" == $profile)"
-team_fields=['id','mgr','company','date','shipDate','client','tech','sum','margin','type','status','bonus','reimburse','reimbursed','investorShare','investorPaid','ts']
+team_fields=['id','mgr','company','date','shipDate','client','tech','sum','margin','type','status','bonus','reimburse','reimbursed','investorShare','investorPaid','ts','statusChangedAt']
 # No parent write grant: history nodes are create-only even for the owner.
 rules={'.read':False,'.write':False,'dashboard':{'.read':False,'.write':False},'dashboard_test':{'.read':False,'.write':False},'data':{'.read':True,'.write':True},'presence':{'.read':True,'.write':True}}
 spark={'access':{'$uid':{'.read':access+' && auth.uid == $uid'}},'profiles':{'.read':access+' && '+boss,'$profile':{'.read':allowed}}}
@@ -20,6 +20,13 @@ for kind in ['sales','activity','plans']:
     for f in numeric:payload[f]={'.validate':'newData.isNumber()'+('' if f=='margin' and kind=='sales' else ' && newData.val() >= 0')}
     for f in text:payload[f]={'.validate':"newData.isString() && newData.val().length <= 10000 && !newData.val().contains('<') && !newData.val().contains('>')"}
     if kind=='sales':
+        prior_record="root.child('spark/profiles').child($profile).child('sales').child($id)"
+        prior=prior_record+".child('versions').child("+prior_record+".child('head').val()+'')"
+        old_time=prior+".child('payload/statusChangedAt')"
+        new_time="newData.child('payload/statusChangedAt')"
+        changed="(!"+prior_record+".exists() || "+prior+".child('deleted').val() == true || "+prior+".child('payload/status').val() != newData.child('payload/status').val())"
+        version['.validate']+=" && (!"+prior_record+".exists() ? (!"+new_time+".exists() || "+new_time+".val() == now) : (!"+new_time+".exists() ? (!"+old_time+".exists() && (newData.child('deleted').val() == true || !"+changed+")) : "+new_time+".val() == (newData.child('deleted').val() == false && "+changed+" ? now : "+old_time+".val())))"
+        payload['statusChangedAt']={'.validate':'newData.isNumber() && newData.val() >= 0 && newData.val() <= now'}
         payload['.validate']+=" && newData.hasChildren(['id','mgr','sum','margin','type','status']) && newData.child('id').val() == $id && (newData.child('type').val() == 'АВ' || newData.child('vin').val() != null && newData.child('vin').val() != '' || newData.child('stockNo').val() != null && newData.child('stockNo').val() != '')"
         payload['reimbursed']={'.validate':'newData.isBoolean()'}
         payload['investorPaid']={'.validate':'newData.isBoolean()'}

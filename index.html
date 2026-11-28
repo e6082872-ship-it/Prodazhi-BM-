@@ -653,6 +653,14 @@ function currentMonth() {
 }
 // Эффективная дата продажи: дата отгрузки если есть, иначе дата сделки
 function saleDate(s) { return s.shipDate || s.date || ''; }
+function saleStatusTime(s) {
+  const value = Number(s.statusChangedAt ?? s.ts ?? 0);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+function isStaleSale(s, now = Date.now()) {
+  const at = saleStatusTime(s);
+  return (s.status === 'В работе' || s.status === 'Аванс получен') && at > 0 && now - at > 14 * 86400000;
+}
 
 function filterByMonth(arr, field, month) {
   if (!month || month === 'all') return arr;
@@ -1256,7 +1264,7 @@ function renderBossMetrics() {
   const totalOpenDeals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен').length;
   const noShipDate = db.sales.filter(s => s.status === 'Закрыта' && !s.shipDate);
   const STALE_DAYS = 14;
-  const staleDeals = db.sales.filter(s => (s.status === 'В работе' || s.status === 'Аванс получен') && s.ts && (Date.now() - s.ts) > STALE_DAYS * 86400000);
+  const staleDeals = db.sales.filter(s => isStaleSale(s));
   // Возврат личных денег менеджерам — не привязан к месяцу, это долг компании до момента выплаты
   const reimburseDeals = db.sales.filter(s => Number(s.reimburse||0) > 0 && !s.reimbursed);
   const reimburseTotal = reimburseDeals.reduce((s,x) => s + Number(x.reimburse||0), 0);
@@ -1786,8 +1794,10 @@ function toggleAVFieldsEdit() {
 }
 
 let editRecord = null;
+let openDealsView = null;
 
 function showNoShipDate() {
+  openDealsView = null;
   const deals = db.sales.filter(s => s.status === 'Закрыта' && !s.shipDate);
   const el = document.getElementById('open-deals-content');
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = '⚠️ Закрытые сделки без даты отгрузки';
@@ -1824,6 +1834,7 @@ function showNoShipDate() {
 }
 
 function showMarginDeals(company) {
+  openDealsView = null;
   const m = currentMonth();
   let deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.type !== 'АВ'), m);
   if (company) deals = deals.filter(s => (s.company||'КТ') === company);
@@ -1869,6 +1880,7 @@ function showMarginDeals(company) {
 }
 
 function showAVDeals() {
+  openDealsView = null;
   const m = currentMonth();
   const deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.type === 'АВ'), m);
   deals.sort((a,b) => (b.date||'').localeCompare(a.date||''));
@@ -1910,6 +1922,7 @@ function showAVDeals() {
 }
 
 function showBonusDeals(half) {
+  openDealsView = null;
   const m = currentMonth();
   let deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && Number(s.bonus||0) > 0), m);
   if (half) {
@@ -1959,6 +1972,7 @@ function showBonusDeals(half) {
 }
 
 function showReimburseDeals() {
+  openDealsView = null;
   const deals = db.sales.filter(s => Number(s.reimburse||0) > 0 && !s.reimbursed);
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'К возврату менеджерам';
   const el = document.getElementById('open-deals-content');
@@ -2010,18 +2024,19 @@ async function markReimbursed(handle) {
 }
 
 function showStaleDeals() {
+  openDealsView = 'stale';
   const STALE_DAYS = 14;
-  const deals = db.sales.filter(s => (s.status === 'В работе' || s.status === 'Аванс получен') && s.ts && (Date.now() - s.ts) > STALE_DAYS * 86400000);
-  deals.sort((a,b) => (a.ts||0) - (b.ts||0));
+  const deals = db.sales.filter(s => isStaleSale(s));
+  deals.sort((a,b) => saleStatusTime(a) - saleStatusTime(b));
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = '⚠️ Зависшие сделки';
   const el = document.getElementById('open-deals-content');
   if (!deals.length) {
     el.innerHTML = '<div class="empty">Зависших сделок нет ✅</div>';
   } else {
-    el.innerHTML = `<div style="font-size:12px;color:#c0392b;margin-bottom:10px;padding:8px;background:#fdeaea;border-radius:8px">⚠️ Эти сделки в работе больше ${STALE_DAYS} дней без изменения статуса — стоит уточнить у менеджера</div>
+    el.innerHTML = `<div style="font-size:12px;color:#c0392b;margin-bottom:10px;padding:8px;background:#fdeaea;border-radius:8px">⚠️ Статус этих сделок не менялся больше ${STALE_DAYS} дней. Отсчёт — от последней смены статуса, а для старых записей без изменений — от добавления сделки.</div>
     <div style="overflow-x:auto"><table>
       <thead><tr>
-        <th style="width:50px">Дата</th>
+        <th style="width:120px">Без движения с</th>
         <th style="width:35px">Комп.</th>
         <th style="width:65px">Менеджер</th>
         <th style="width:90px">Клиент</th>
@@ -2034,9 +2049,9 @@ function showStaleDeals() {
       const idx = db.sales.indexOf(s);
       const mgr = mgrById(s.mgr);
       const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
-      const days = Math.floor((Date.now() - s.ts) / 86400000);
+      const days = Math.floor((Date.now() - saleStatusTime(s)) / 86400000);
       return `<tr style="background:#fff9f9">
-        <td>${fmtDate(s.date)}</td>
+        <td>${new Date(saleStatusTime(s)).toLocaleDateString('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit'})}</td>
         <td>${cBadge}</td>
         <td>${mgr ? mgr.name : s.mgr}</td>
         <td>${s.client||'—'}</td>
@@ -2051,6 +2066,7 @@ function showStaleDeals() {
 }
 
 function showInvestorDeals() {
+  openDealsView = null;
   const m = currentMonth();
   const deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && Number(s.investorShare||0) > 0), m);
   deals.sort((a,b) => (saleDate(b)||'').localeCompare(saleDate(a)||''));
@@ -2092,6 +2108,7 @@ function showInvestorDeals() {
 }
 
 function showOpenDeals() {
+  openDealsView = null;
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'Текущие сделки';
   const deals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен');
   deals.sort((a,b) => (b.date||'').localeCompare(a.date||''));
@@ -2136,6 +2153,7 @@ function showOpenDeals() {
 }
 
 function closeOpenDeals() {
+  openDealsView = null;
   document.getElementById('open-deals-modal').classList.remove('on');
 }
 
@@ -2206,8 +2224,9 @@ async function saveEditSale() {
     comm: document.getElementById('e-comm').value || ''
   };
   if (!await saveDB(data => replaceSale(data, before, updated))) return;
-  editRecord = clone(updated);
+  editRecord = clone(db.sales.find(s => s.id === updated.id) || updated);
   window.bmDrafts.resetDirty();
+  if (currentUser === 'boss') renderBossMetrics();
   const ok = document.getElementById('edit-ok');
   ok.style.display = 'block';
   setTimeout(() => {
@@ -2547,14 +2566,14 @@ async function showProtectionHistory(){
 init=async function(){
   buildProfileLanding();
   try{
-    secureAuth=await import('./auth.js?v=7ffc1f89c592');
+    secureAuth=await import('./auth.js?v=8d38ede501f8');
     secureAuth.boot(result=>{
       db=normalizeDB(result.data);
       if(selectedProfile)chooseProfile(selectedProfile);else buildProfileLanding();
     },()=>{
       if(typeof clearTeamFinance==='function')clearTeamFinance();
       secureAuthEpoch++;window.bmDrafts.beforeChange();currentUser=null;secureOperation=null;
-      db={sales:[],activity:[],plans:{}};editRecord=null;dbRevision++;
+      db={sales:[],activity:[],plans:{}};editRecord=null;openDealsView=null;dbRevision++;
       ['s-mgr','s-boss','s-team-finance','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});
       for(const id of ['my-sales-body','my-metrics','stat-content','day-history','my-client-search-results','boss-metrics','boss-ranking','boss-insights','all-sales-body','all-sales-total','activity-body','team-grid','client-search-results','plans-form','plans-progress','protection-history-content','manager-metric-content','open-deals-content','team-finance-content','team-finance-month','team-finance-manager']) {
         const el=document.getElementById(id);if(el)el.replaceChildren();
@@ -2570,6 +2589,7 @@ init=async function(){
       if(!currentUser||saving||!await loadDB())return;
       if(currentUser==='boss'){
         renderBossMetrics();renderBossRanking();renderAllSales();renderActivity();buildTeamGrid();
+        if(openDealsView==='stale'&&document.getElementById('open-deals-modal').classList.contains('on'))showStaleDeals();
       }else{renderMyMetrics(currentUser);renderDayHistory(currentUser);renderMySales(currentUser);}
     },30000);
   }catch{showProtectionMessage('Личный вход временно недоступен. Обновите страницу или обратитесь к руководителю.');}
@@ -2676,7 +2696,7 @@ function teamFinanceMetric(data,kind,month,now=Date.now()){
   }else if(kind==='investor'){rows=closed.filter(s=>Number(s.investorShare||0)>0);field='investorShare';}
   else if(kind==='reimburse'){rows=data.sales.filter(s=>Number(s.reimburse||0)>0&&!s.reimbursed);field='reimburse';allPeriods=true;}
   else if(kind==='missingShip'){rows=data.sales.filter(s=>s.status==='Закрыта'&&!s.shipDate);money=false;allPeriods=true;}
-  else{rows=data.sales.filter(s=>s.status==='В работе'||s.status==='Аванс получен');money=false;allPeriods=true;if(kind==='stale'){rows=rows.filter(s=>s.ts&&(now-s.ts)>14*86400000);note='Текущие сделки старше 14 дней.';}}
+  else{rows=data.sales.filter(s=>s.status==='В работе'||s.status==='Аванс получен');money=false;allPeriods=true;if(kind==='stale'){rows=rows.filter(s=>isStaleSale(s,now));note='Статус не менялся больше 14 дней. Отсчёт — от последней смены статуса либо добавления старой записи без изменений.';}}
   const records=[...rows].sort((a,b)=>saleDate(b).localeCompare(saleDate(a)));
   return {team:true,kind,month,title:labels[kind],records,field,money,activity:false,allPeriods,note,total:money?records.reduce((n,s)=>n+Number(s[field]||0),0):records.length};
 }
@@ -2711,7 +2731,7 @@ async function renderTeamFinance(){
       const metric=teamFinanceMetric(scoped,kind,month);let sub='';
       if(kind==='margin'&&plan>0)sub='план '+Math.round(metric.total/plan*100)+'%';
       else if(['marginKT','marginAS','reimburse','investor'].includes(kind))sub='Записей: '+metric.records.length;
-      else if(kind==='stale')sub='старше 14 дней';
+      else if(kind==='stale')sub='без смены статуса >14 дней';
       return `<button type="button" class="m metric-drilldown" onclick="showTeamFinanceMetric('${kind}')" aria-haspopup="dialog" aria-controls="manager-metric-modal"><div class="m-v">${metric.money?'₽':''}${fmt(metric.total)}</div><div class="m-l">${metric.title}</div>${sub?'<div class="m-s">'+sub+'</div>':''}</button>`;
     }).join('')+'</div>';
   }catch(e){if(ticket===teamFinanceRequest&&epoch===secureAuthEpoch)container.textContent=e.message||'Общую сводку пока не удалось загрузить.';}

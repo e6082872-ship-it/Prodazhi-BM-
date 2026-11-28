@@ -1,4 +1,4 @@
-import {view,differences,makeUpdates,history,current,teamFinanceData} from './model.mjs?v=de4133ffce03';
+import {view,differences,makeUpdates,history,current,teamFinanceData} from './model.mjs?v=1fc64018bcec';
 export function createStore(sdk,database,actor){
  let profiles={},claims={},teamView={},closed=false,failure=null,teamFailure=null;
  const stops=[];
@@ -12,7 +12,7 @@ export function createStore(sdk,database,actor){
  return {
   async read(){await ready;if(failure)throw failure;if(closed)throw Error('Сеанс завершён.');return result();},
   async save(request){
-   await ready;if(failure)throw failure;if(closed)throw Error('Сеанс завершён.');
+   await ready;await teamReady;if(failure)throw failure;if(closed)throw Error('Сеанс завершён.');
    let changes;
    if(request.action==='restore'){
     if(actor.profile!=='boss')throw Error('Нет доступа.');

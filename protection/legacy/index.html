@@ -557,6 +557,14 @@ function currentMonth() {
 }
 // Эффективная дата продажи: дата отгрузки если есть, иначе дата сделки
 function saleDate(s) { return s.shipDate || s.date || ''; }
+function saleStatusTime(s) {
+  const value = Number(s.statusChangedAt ?? s.ts ?? 0);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+function isStaleSale(s, now = Date.now()) {
+  const at = saleStatusTime(s);
+  return (s.status === 'В работе' || s.status === 'Аванс получен') && at > 0 && now - at > 14 * 86400000;
+}
 
 function filterByMonth(arr, field, month) {
   if (!month || month === 'all') return arr;
@@ -1165,7 +1173,7 @@ function renderBossMetrics() {
   const totalOpenDeals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен').length;
   const noShipDate = db.sales.filter(s => s.status === 'Закрыта' && !s.shipDate);
   const STALE_DAYS = 14;
-  const staleDeals = db.sales.filter(s => (s.status === 'В работе' || s.status === 'Аванс получен') && s.ts && (Date.now() - s.ts) > STALE_DAYS * 86400000);
+  const staleDeals = db.sales.filter(s => isStaleSale(s));
   // Возврат личных денег менеджерам — не привязан к месяцу, это долг компании до момента выплаты
   const reimburseDeals = db.sales.filter(s => Number(s.reimburse||0) > 0 && !s.reimbursed);
   const reimburseTotal = reimburseDeals.reduce((s,x) => s + Number(x.reimburse||0), 0);
@@ -1695,8 +1703,10 @@ function toggleAVFieldsEdit() {
 }
 
 let editRecord = null;
+let openDealsView = null;
 
 function showNoShipDate() {
+  openDealsView = null;
   const deals = db.sales.filter(s => s.status === 'Закрыта' && !s.shipDate);
   const el = document.getElementById('open-deals-content');
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = '⚠️ Закрытые сделки без даты отгрузки';
@@ -1733,6 +1743,7 @@ function showNoShipDate() {
 }
 
 function showMarginDeals(company) {
+  openDealsView = null;
   const m = currentMonth();
   let deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.type !== 'АВ'), m);
   if (company) deals = deals.filter(s => (s.company||'КТ') === company);
@@ -1778,6 +1789,7 @@ function showMarginDeals(company) {
 }
 
 function showAVDeals() {
+  openDealsView = null;
   const m = currentMonth();
   const deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && s.type === 'АВ'), m);
   deals.sort((a,b) => (b.date||'').localeCompare(a.date||''));
@@ -1819,6 +1831,7 @@ function showAVDeals() {
 }
 
 function showBonusDeals(half) {
+  openDealsView = null;
   const m = currentMonth();
   let deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && Number(s.bonus||0) > 0), m);
   if (half) {
@@ -1868,6 +1881,7 @@ function showBonusDeals(half) {
 }
 
 function showReimburseDeals() {
+  openDealsView = null;
   const deals = db.sales.filter(s => Number(s.reimburse||0) > 0 && !s.reimbursed);
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'К возврату менеджерам';
   const el = document.getElementById('open-deals-content');
@@ -1919,18 +1933,19 @@ async function markReimbursed(handle) {
 }
 
 function showStaleDeals() {
+  openDealsView = 'stale';
   const STALE_DAYS = 14;
-  const deals = db.sales.filter(s => (s.status === 'В работе' || s.status === 'Аванс получен') && s.ts && (Date.now() - s.ts) > STALE_DAYS * 86400000);
-  deals.sort((a,b) => (a.ts||0) - (b.ts||0));
+  const deals = db.sales.filter(s => isStaleSale(s));
+  deals.sort((a,b) => saleStatusTime(a) - saleStatusTime(b));
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = '⚠️ Зависшие сделки';
   const el = document.getElementById('open-deals-content');
   if (!deals.length) {
     el.innerHTML = '<div class="empty">Зависших сделок нет ✅</div>';
   } else {
-    el.innerHTML = `<div style="font-size:12px;color:#c0392b;margin-bottom:10px;padding:8px;background:#fdeaea;border-radius:8px">⚠️ Эти сделки в работе больше ${STALE_DAYS} дней без изменения статуса — стоит уточнить у менеджера</div>
+    el.innerHTML = `<div style="font-size:12px;color:#c0392b;margin-bottom:10px;padding:8px;background:#fdeaea;border-radius:8px">⚠️ Статус этих сделок не менялся больше ${STALE_DAYS} дней. Отсчёт — от последней смены статуса, а для старых записей без изменений — от добавления сделки.</div>
     <div style="overflow-x:auto"><table>
       <thead><tr>
-        <th style="width:50px">Дата</th>
+        <th style="width:120px">Без движения с</th>
         <th style="width:35px">Комп.</th>
         <th style="width:65px">Менеджер</th>
         <th style="width:90px">Клиент</th>
@@ -1943,9 +1958,9 @@ function showStaleDeals() {
       const idx = db.sales.indexOf(s);
       const mgr = mgrById(s.mgr);
       const cBadge = s.company === 'АС' ? '<span class="badge ba">АС</span>' : '<span class="badge bb">КТ</span>';
-      const days = Math.floor((Date.now() - s.ts) / 86400000);
+      const days = Math.floor((Date.now() - saleStatusTime(s)) / 86400000);
       return `<tr style="background:#fff9f9">
-        <td>${fmtDate(s.date)}</td>
+        <td>${new Date(saleStatusTime(s)).toLocaleDateString('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit'})}</td>
         <td>${cBadge}</td>
         <td>${mgr ? mgr.name : s.mgr}</td>
         <td>${s.client||'—'}</td>
@@ -1960,6 +1975,7 @@ function showStaleDeals() {
 }
 
 function showInvestorDeals() {
+  openDealsView = null;
   const m = currentMonth();
   const deals = filterSalesByMonth(db.sales.filter(s => s.status === 'Закрыта' && Number(s.investorShare||0) > 0), m);
   deals.sort((a,b) => (saleDate(b)||'').localeCompare(saleDate(a)||''));
@@ -2001,6 +2017,7 @@ function showInvestorDeals() {
 }
 
 function showOpenDeals() {
+  openDealsView = null;
   document.getElementById('open-deals-modal').querySelector('.modal-title span').textContent = 'Текущие сделки';
   const deals = db.sales.filter(s => s.status === 'В работе' || s.status === 'Аванс получен');
   deals.sort((a,b) => (b.date||'').localeCompare(a.date||''));
@@ -2045,6 +2062,7 @@ function showOpenDeals() {
 }
 
 function closeOpenDeals() {
+  openDealsView = null;
   document.getElementById('open-deals-modal').classList.remove('on');
 }
 
@@ -2113,7 +2131,8 @@ async function saveEditSale() {
     comm: document.getElementById('e-comm').value || ''
   };
   if (!await saveDB(data => replaceSale(data, before, updated))) return;
-  editRecord = clone(updated);
+  editRecord = clone(db.sales.find(s => s.id === updated.id) || updated);
+  if (currentUser === 'boss') renderBossMetrics();
   const ok = document.getElementById('edit-ok');
   ok.style.display = 'block';
   setTimeout(() => {

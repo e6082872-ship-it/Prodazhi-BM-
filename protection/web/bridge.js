@@ -167,7 +167,7 @@ init=async function(){
     },()=>{
       if(typeof clearTeamFinance==='function')clearTeamFinance();
       secureAuthEpoch++;window.bmDrafts.beforeChange();currentUser=null;secureOperation=null;
-      db={sales:[],activity:[],plans:{}};editRecord=null;dbRevision++;
+      db={sales:[],activity:[],plans:{}};editRecord=null;openDealsView=null;dbRevision++;
       ['s-mgr','s-boss','s-team-finance','edit-modal','protection-history','manager-metric-modal','open-deals-modal'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});
       for(const id of ['my-sales-body','my-metrics','stat-content','day-history','my-client-search-results','boss-metrics','boss-ranking','boss-insights','all-sales-body','all-sales-total','activity-body','team-grid','client-search-results','plans-form','plans-progress','protection-history-content','manager-metric-content','open-deals-content','team-finance-content','team-finance-month','team-finance-manager']) {
         const el=document.getElementById(id);if(el)el.replaceChildren();
@@ -183,6 +183,7 @@ init=async function(){
       if(!currentUser||saving||!await loadDB())return;
       if(currentUser==='boss'){
         renderBossMetrics();renderBossRanking();renderAllSales();renderActivity();buildTeamGrid();
+        if(openDealsView==='stale'&&document.getElementById('open-deals-modal').classList.contains('on'))showStaleDeals();
       }else{renderMyMetrics(currentUser);renderDayHistory(currentUser);renderMySales(currentUser);}
     },30000);
   }catch{showProtectionMessage('Личный вход временно недоступен. Обновите страницу или обратитесь к руководителю.');}

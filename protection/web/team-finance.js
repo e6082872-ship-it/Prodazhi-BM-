@@ -15,7 +15,7 @@ function teamFinanceMetric(data,kind,month,now=Date.now()){
   }else if(kind==='investor'){rows=closed.filter(s=>Number(s.investorShare||0)>0);field='investorShare';}
   else if(kind==='reimburse'){rows=data.sales.filter(s=>Number(s.reimburse||0)>0&&!s.reimbursed);field='reimburse';allPeriods=true;}
   else if(kind==='missingShip'){rows=data.sales.filter(s=>s.status==='Закрыта'&&!s.shipDate);money=false;allPeriods=true;}
-  else{rows=data.sales.filter(s=>s.status==='В работе'||s.status==='Аванс получен');money=false;allPeriods=true;if(kind==='stale'){rows=rows.filter(s=>s.ts&&(now-s.ts)>14*86400000);note='Текущие сделки старше 14 дней.';}}
+  else{rows=data.sales.filter(s=>s.status==='В работе'||s.status==='Аванс получен');money=false;allPeriods=true;if(kind==='stale'){rows=rows.filter(s=>isStaleSale(s,now));note='Статус не менялся больше 14 дней. Отсчёт — от последней смены статуса либо добавления старой записи без изменений.';}}
   const records=[...rows].sort((a,b)=>saleDate(b).localeCompare(saleDate(a)));
   return {team:true,kind,month,title:labels[kind],records,field,money,activity:false,allPeriods,note,total:money?records.reduce((n,s)=>n+Number(s[field]||0),0):records.length};
 }
@@ -50,7 +50,7 @@ async function renderTeamFinance(){
       const metric=teamFinanceMetric(scoped,kind,month);let sub='';
       if(kind==='margin'&&plan>0)sub='план '+Math.round(metric.total/plan*100)+'%';
       else if(['marginKT','marginAS','reimburse','investor'].includes(kind))sub='Записей: '+metric.records.length;
-      else if(kind==='stale')sub='старше 14 дней';
+      else if(kind==='stale')sub='без смены статуса >14 дней';
       return `<button type="button" class="m metric-drilldown" onclick="showTeamFinanceMetric('${kind}')" aria-haspopup="dialog" aria-controls="manager-metric-modal"><div class="m-v">${metric.money?'₽':''}${fmt(metric.total)}</div><div class="m-l">${metric.title}</div>${sub?'<div class="m-s">'+sub+'</div>':''}</button>`;
     }).join('')+'</div>';
   }catch(e){if(ticket===teamFinanceRequest&&epoch===secureAuthEpoch)container.textContent=e.message||'Общую сводку пока не удалось загрузить.';}

@@ -79,11 +79,11 @@ test('team finance separates sales, AV, halves of the month, company margins and
  {mgr:'artg',status:'Закрыта',company:'КТ',type:'Безнал',date:'2026-11-16',sum:300,margin:60,bonus:20},
  {mgr:'arts',status:'Закрыта',type:'АВ',date:'2026-11-20',sum:40,margin:40,bonus:8},
  {mgr:'vlad',status:'Отменена',type:'Безнал',date:'2026-11-02',sum:900,margin:900,bonus:900},
- {mgr:'felix',status:'В работе',type:'Безнал',date:'2026-10-01',ts:1000-15*86400000},
- {mgr:'ilya',status:'Аванс получен',type:'Безнал',date:'2026-10-02',ts:1000-14*86400000},
+ {mgr:'felix',status:'В работе',type:'Безнал',date:'2026-10-01',ts:2000000000000-15*86400000},
+ {mgr:'ilya',status:'Аванс получен',type:'Безнал',date:'2026-10-02',ts:2000000000000-14*86400000},
  {mgr:'ilya',status:'Закрыта',type:'Безнал',date:'2026-10-01',sum:999,bonus:999,reimburse:30}];`);
- for(const [key,total]of Object.entries({revenue:600,sales:3,margin:140,marginKT:90,marginAS:50,av:40,bonus:53,bonusFirst:25,bonusSecond:28,investor:12,reimburse:50,open:2,stale:1}))assert.equal(c.run(`teamFinanceMetric(db,'${key}','2026-11',1000).total`),total,key);
- const html=c.run("renderManagerMetricDetails(teamFinanceMetric(db,'bonusFirst','2026-11',1000))");assert.ok(html.includes('Вся команда'));assert.ok(html.includes('<th>Менеджер</th>'));assert.ok(html.includes('Филипп'));assert.ok(!html.includes('openEditModal'));
+ for(const [key,total]of Object.entries({revenue:600,sales:3,margin:140,marginKT:90,marginAS:50,av:40,bonus:53,bonusFirst:25,bonusSecond:28,investor:12,reimburse:50,open:2,stale:1}))assert.equal(c.run(`teamFinanceMetric(db,'${key}','2026-11',2000000000000).total`),total,key);
+ const html=c.run("renderManagerMetricDetails(teamFinanceMetric(db,'bonusFirst','2026-11',2000000000000))");assert.ok(html.includes('Вся команда'));assert.ok(html.includes('<th>Менеджер</th>'));assert.ok(html.includes('Филипп'));assert.ok(!html.includes('openEditModal'));
 });
 test('shared financial projection omits private contact details, purchase prices and history',()=>{
  const state=convert({sales:[{...sale,purchase:70,contactPhone:'PRIVATE_PHONE',contactName:'PRIVATE_CONTACT',comm:'PRIVATE_COMMENT'}],activity:[],plans:{}});
@@ -94,4 +94,29 @@ test('shared review cannot be opened without a verified active identity',()=>{
 });
 test('a read-only team filter limits displayed sales and plans without changing the signed-in profile',()=>{
  const c=protectedPage();c.run("currentUser='ilya';db.sales=[{mgr:'ilya',sum:10},{mgr:'filip',sum:20}];db.plans={'ilya_2026-11':{margin:1},'filip_2026-11':{margin:2}};");const filtered=c.run("filterTeamFinance(db,'filip')");assert.equal(filtered.sales.length,1);assert.equal(filtered.sales[0].sum,20);assert.deepEqual(Object.keys(filtered.plans),['filip_2026-11']);assert.equal(c.run('currentUser'),'ilya');assert.equal(c.run('db.sales.length'),2);
+});
+test('a status transition resets staleness without changing creation time or financial fields and can be retried',()=>{
+ const before={...sale,status:'В работе'},profiles=convert({sales:[before]}).profiles,after={...before,status:'Аванс получен'},changes=[{profile:'ilya',kind:'sales',id:before.id,before,after}],actor={uid:'u',profile:'ilya'};
+ const updates=makeUpdates(profiles,{stockNo:{'BM-001':{profile:'ilya',id:'s1'}}},changes,actor,'status-op',5000);
+ const row=updates['spark/profiles/ilya/sales/s1/versions/1'];assert.equal(row.payload.statusChangedAt,5000);assert.equal(row.payload.ts,before.ts);assert.equal(row.payload.sum,before.sum);assert.equal(row.payload.margin,before.margin);assert.equal(updates['spark/teamView/sales/ilya/s1'].statusChangedAt,5000);assert.equal(after.statusChangedAt,undefined);
+ profiles.ilya.sales.s1.head=1;profiles.ilya.sales.s1.versions[1]=row;assert.deepEqual(makeUpdates(profiles,{},changes,actor,'status-op',9999),{});
+ const edit={...row.payload,sum:120,statusChangedAt:99999};const next=makeUpdates(profiles,{},[{profile:'ilya',kind:'sales',id:'s1',before:row.payload,after:edit}],actor,'price-op',6000);assert.equal(next['spark/profiles/ilya/sales/s1/versions/2'].payload.statusChangedAt,5000);
+});
+test('new and restored sales receive server movement time while a plain edit of an old sale does not reset it',()=>{
+ const before={...sale,status:'В работе'},profiles=convert({sales:[before]}).profiles,actor={uid:'u',profile:'boss'};
+ const plainEdit=makeUpdates(profiles,{},[{profile:'ilya',kind:'sales',id:'s1',before,after:{...before,comm:'edited'}}],actor,'plain-op',6000);assert.equal(plainEdit['spark/profiles/ilya/sales/s1/versions/1'].payload.statusChangedAt,undefined);
+ profiles.ilya.sales.s1.versions[0].deleted=true;
+ const restored=makeUpdates(profiles,{},[{profile:'ilya',kind:'sales',id:'s1',before:null,after:before}],actor,'restore-op',7000);assert.equal(restored['spark/profiles/ilya/sales/s1/versions/1'].payload.statusChangedAt,7000);
+ const added=makeUpdates({}, {},[{profile:'ilya',kind:'sales',id:'s2',before:null,after:{...sale,id:'s2',type:'АВ'}}],actor,'new-op',8000);assert.equal(added['spark/profiles/ilya/sales/s2/versions/1'].payload.statusChangedAt,8000);
+});
+test('boss and shared stale counts use last status change, ignore completed deals and honor the 14-day boundary',()=>{
+ const c=protectedPage();c.run(`const statusNow=2000000000000;Date.now=()=>statusNow;db.sales=[
+ {id:'changed',mgr:'filip',status:'Аванс получен',type:'Безнал',ts:statusNow-20*86400000,statusChangedAt:statusNow-86400000},
+ {id:'old',mgr:'ilya',status:'В работе',type:'Безнал',ts:statusNow-20*86400000},
+ {id:'edge',mgr:'ilya',status:'В работе',ts:statusNow-20*86400000,statusChangedAt:statusNow-14*86400000},
+ {id:'closed',mgr:'ilya',status:'Закрыта',ts:statusNow-20*86400000},
+ {id:'cancelled',mgr:'ilya',status:'Отменена',ts:statusNow-20*86400000}];`);
+ assert.deepEqual(Array.from(c.run('db.sales.filter(s=>isStaleSale(s)).map(s=>s.id)')),['old']);assert.equal(c.run("teamFinanceMetric(db,'stale','2026-11',statusNow).total"),1);
+ c.run('db.sales[1].statusChangedAt=statusNow;renderBossMetrics()');assert.ok(!c.el('boss-metrics').innerHTML.includes('Зависшие сделки'));assert.equal(c.run("teamFinanceMetric(db,'stale','2026-11',statusNow).total"),0);
+ c.run('db.sales[2].statusChangedAt--');assert.equal(c.run('isStaleSale(db.sales[2])'),true);
 });
